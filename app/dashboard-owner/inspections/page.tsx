@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ShieldCheck, CheckCircle2, XCircle, Eye, 
-  MessageSquare, Loader2, Calendar, User, Camera 
+  MessageSquare, Loader2, Calendar, User, Camera, AlertCircle 
 } from "lucide-react";
 
 export default function OwnerInspections() {
@@ -96,7 +96,7 @@ export default function OwnerInspections() {
                 onClick={() => setSelectedInspection(ins)}
                 className="mt-6 md:mt-0 px-8 py-4 bg-[#1F2937] text-white rounded-2xl font-bold text-xs hover:bg-black transition-all flex items-center gap-2 shadow-lg active:scale-95"
               >
-                <Eye size={16} /> Review Evidence ({ins.images.length})
+                <Eye size={16} /> Review Evidence ({ins.report?.length || 0})
               </button>
             </motion.div>
           ))
@@ -117,16 +117,55 @@ export default function OwnerInspections() {
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-10 grid grid-cols-1 md:grid-cols-2 gap-8 custom-scrollbar">
-                {selectedInspection.images.map((img: any, i: number) => (
-                  <div key={i} className="group relative aspect-video bg-gray-50 rounded-[32px] overflow-hidden border border-gray-100 shadow-sm">
-                    <img src={img.url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                    <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest text-blue-600 shadow-sm border border-white">
-                      {img.category} Audit
-                    </div>
-                  </div>
-                ))}
+<div className="flex-1 overflow-y-auto p-10 custom-scrollbar">
+  {/* ✅ Check if report exists and has items */}
+  {selectedInspection.report && selectedInspection.report.length > 0 ? (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      {selectedInspection.report.map((item: any, i: number) => (
+        <div key={i} className="group relative bg-gray-50 rounded-[32px] overflow-hidden border border-gray-100 shadow-sm flex flex-col">
+          <div className="aspect-video relative bg-gray-200">
+            {item.photoUrl ? (
+              <img src={item.photoUrl} alt={item.itemName} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-400 font-bold text-[10px] uppercase tracking-widest bg-gray-100">
+                No Photo (Marked Good)
               </div>
+            )}
+            
+            {/* 🏷️ Item Labels */}
+            <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest text-blue-600 shadow-sm border border-white">
+              {item.roomName} • {item.itemName}
+            </div>
+
+            <div className={`absolute top-4 right-4 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm border border-white ${
+              item.condition === 'Good' ? 'bg-emerald-500 text-white' : 
+              item.condition === 'Fair' ? 'bg-orange-400 text-white' : 'bg-red-500 text-white'
+            }`}>
+              {item.condition}
+            </div>
+          </div>
+          {item.tenantComment && (
+            <div className="p-4 bg-white border-t border-gray-50">
+              <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Tenant Note:</p>
+              <p className="text-xs text-gray-600 italic">"{item.tenantComment}"</p>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  ) : (
+    /* ❌ Fallback if report is empty */
+    <div className="h-64 flex flex-col items-center justify-center text-center space-y-4">
+      <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center text-orange-500">
+        <AlertCircle size={32} />
+      </div>
+      <div>
+        <p className="text-lg font-bold text-[#1F2937]">Incompatible Audit Data</p>
+        <p className="text-sm text-gray-400 max-w-xs mx-auto">This inspection was submitted using an older version of the app and lacks structured room data.</p>
+      </div>
+    </div>
+  )}
+</div>
 
               <div className="p-10 bg-white border-t border-gray-50 space-y-6">
                 <div className="relative">

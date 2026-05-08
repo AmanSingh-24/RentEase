@@ -8,7 +8,7 @@ import { logActivity } from "@/lib/logActivity";
 export async function POST(request: Request) {
   try {
     await connectToDatabase();
-    const { tenantId, images } = await request.json();
+    const { tenantId, report } = await request.json(); // report is itemized
 
     const user = await User.findById(tenantId);
     if (!user || !user.propertyId) {
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     const property = await Property.findById(user.propertyId);
     if (!property) return NextResponse.json({ error: "Property metadata missing" }, { status: 404 });
 
-    // ✅ LOGIC: Upsert inspection only if NOT already verified
+    // ✅ LOGIC: Save the itemized report
     const inspection = await Inspection.findOneAndUpdate(
       { 
         tenantId, 
@@ -27,9 +27,12 @@ export async function POST(request: Request) {
         status: { $ne: "verified" } 
       },
       { 
-        images: images.map((img: any) => ({
-          url: img.url,
-          category: img.category || "General",
+        report: report.map((item: any) => ({
+          roomName: item.roomName,
+          itemName: item.itemName,
+          condition: item.condition,
+          photoUrl: item.photoUrl || null,
+          tenantComment: item.tenantComment || "",
           isCameraCaptured: true,
           timestamp: new Date()
         })),
@@ -40,13 +43,13 @@ export async function POST(request: Request) {
       { upsert: true, new: true }
     );
 
-    // 🔔 Alert the owner to review
+    // 🔔 Alert the owner
     await logActivity({
       propertyId: user.propertyId,
       recipientId: property.ownerId,
       senderId: tenantId,
-      title: "Evidence Pending Review",
-      desc: `${user.name} has submitted move-in photos for audit at ${property.address}.`,
+      title: "Itemized Audit Submitted",
+      desc: `${user.name} has completed the room-by-room audit for ${property.address}.`,
       category: "legal"
     });
 

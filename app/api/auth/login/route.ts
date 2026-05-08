@@ -3,27 +3,38 @@ import connectToDatabase from "@/lib/mongodb";
 import User from "@/models/User";
 import bcrypt from "bcryptjs";
 
+// app/api/auth/login/route.ts
 export async function POST(request: Request) {
   try {
     await connectToDatabase();
     const { email, password } = await request.json();
+    console.log("🔍 Login attempt for:", email); // DEBUG
 
     const user = await User.findOne({ email });
+    
     if (!user) {
-      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+      console.log("❌ User not found");
+      return NextResponse.json({ error: "No account found with this email." }, { status: 401 });
     }
 
-    // Bypass hash check for Google users trying to use manual login form
     if (user.password === "GOOGLE_AUTH_USER") {
+       console.log("⚠️ Google user attempted manual login");
        return NextResponse.json({ error: "Please log in using Google for this account." }, { status: 401 });
     }
 
+    // Check if password exists before comparing
+    if (!password || !user.password) {
+       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+    }
+
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
+    
     if (!isPasswordCorrect) {
+      console.log("❌ Incorrect password");
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
-    // ✅ PROVIDE CONSISTENT USER PAYLOAD
+    console.log("✅ Login successful for:", user.name);
     return NextResponse.json({
       message: "Login successful",
       user: {
@@ -35,7 +46,9 @@ export async function POST(request: Request) {
         isOnboarded: user.isOnboarded || false
       }
     }, { status: 200 });
+    
   } catch (error: any) {
-    return NextResponse.json({ error: "Login failed" }, { status: 500 });
+    console.error("🔥 LOGIN_API_CRASH:", error); // Check your VS Code terminal for this!
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
