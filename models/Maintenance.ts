@@ -4,22 +4,35 @@ const MaintenanceSchema = new mongoose.Schema({
   propertyId: { type: mongoose.Schema.Types.ObjectId, ref: "Property", required: true },
   tenantId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   
-  // Structured Location
   roomName: { type: String, required: true },
   itemName: { type: String, required: true },
-  
   description: { type: String, required: true },
+  
   status: { 
     type: String, 
-    enum: ["reported", "owner_review", "tenant_led_fix", "owner_led_fix", "resolved", "rejected"], 
+    enum: ["reported", "tenant_led_fix", "owner_led_fix", "resolved", "rejected"], 
     default: "reported" 
   },
   
-  // 📸 Evidence
   issueImages: [{ url: String, timestamp: { type: Date, default: Date.now } }],
-  finalInvoice: { url: String, amount: Number }, // Proof of payment for ledger
+  
+  // 🧾 FINANCIAL SEAL
+  finalInvoice: { 
+    amount: { type: Number, default: 0 }, 
+    url: String // This is the official bill OR the "After" photo
+  },
+  
+  // 🕵️ VERIFICATION PROTOCOL (For Local Workers)
+  resolutionEvidence: {
+    workerName: String,
+    workerContact: String,
+    hasOfficialBill: { type: Boolean, default: true },
+    afterImage: String,
+    workerVerified: { type: Boolean, default: false },
+    workerVerifiedAt: Date,
+  },
+  isAmountApproved: { type: Boolean, default: false },
 
-  // ⚖️ Triage Logic (The Brain)
   estimatedCost: { type: Number, default: 0 },
   responsibility: { type: String, enum: ["owner", "tenant", "disputed"], default: "tenant" },
   causation: { 
@@ -28,14 +41,8 @@ const MaintenanceSchema = new mongoose.Schema({
     default: "wear_and_tear" 
   },
   
-  // Owner's Action
-  approvedBudget: { type: Number, default: 0 },
-  contractorInfo: {
-    name: String,
-    contact: String,
-    arrival: String
-  },
-
+  contractorInfo: { name: String, contact: String, arrival: String },
+  ownerFeedback: String,
   createdAt: { type: Date, default: Date.now }
 });
 

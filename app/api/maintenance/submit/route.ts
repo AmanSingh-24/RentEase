@@ -44,7 +44,14 @@ export async function POST(request: Request) {
       causation = "pre_existing";
     }
     else {
-      responsibility = Number(estimatedCost) < threshold ? "tenant" : "owner";
+      // Threshold Protocol (Day 8 onwards with Good baseline)
+      if (Number(estimatedCost) < threshold) {
+        responsibility = "tenant";
+        causation = "wear_and_tear";
+      } else {
+        responsibility = "owner";
+        causation = "wear_and_tear";
+      }
     }
 
     // 4. Upload Damage Photos
