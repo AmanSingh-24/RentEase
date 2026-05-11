@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  Plus, CheckCircle2, AlertCircle, Camera, X, Loader2, IndianRupee, ShieldCheck, UploadCloud, Clock, Hammer, Layers, Info
+  Plus, CheckCircle2, AlertCircle, Camera, X, Loader2, IndianRupee, ShieldCheck, UploadCloud, Clock, Hammer, Layers, Info, Wrench
 } from "lucide-react";
 
 export default function MaintenancePage() {
@@ -14,6 +14,7 @@ export default function MaintenancePage() {
   const [isReporting, setIsReporting] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
   const [resolvingIssue, setResolvingIssue] = useState<any>(null);
+  const [resubmittingIssue, setResubmittingIssue] = useState<any>(null);
   const [captureTarget, setCaptureTarget] = useState<"issue" | "after">("issue");
   const [triageAlert, setTriageAlert] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -116,27 +117,28 @@ export default function MaintenancePage() {
   };
 
 const submitResolution = async () => {
-  if (!resolvingIssue) return;
+  const issue = resolvingIssue || resubmittingIssue;
+  if (!issue) return;
 
   try {
     const res = await fetch("/api/maintenance/action", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 
-        issueId: resolvingIssue._id, 
+        issueId: issue._id, 
         action: "resolve", 
         receiptAmount,
-        // ✅ CRITICAL: Ensure these specific keys match what the API expects
         workerName,
         workerContact,
         hasOfficialBill,
-        afterImage, 
+        afterImage,
+        isResubmission: !!resubmittingIssue
       })
     });
 
     if (res.ok) {
       setResolvingIssue(null);
-      // Ensure specific clean-up to prevent duplication on next repair
+      setResubmittingIssue(null);
       setAfterImage("");
       setWorkerName("");
       setWorkerContact("");
@@ -186,13 +188,56 @@ const submitResolution = async () => {
     return false;
   });
 
-  // Owner-Assigned Contractors: Owner has assigned a professional
+  // Owner-Assigned Contractors: Owner has assigned a professional (awaiting work completion)
   const ownerAssigned = issues.filter((i: any) => i.status === "owner_led_fix" && i.responsibility === "owner");
 
-  // Pending Owner Review: Issues submitted by tenant for owner verification (only owner responsibility)
-  const pending = issues.filter((i: any) => i.status === "resolved" && !i.isAmountApproved);
+  const confirmWorkComplete = async (issueId: string) => {
+    try {
+      const res = await fetch("/api/maintenance/action", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          issueId,
+          action: "professional_work_complete"
+        })
+      });
+
+      if (res.ok) {
+        await fetchMaintenance();
+      }
+    } catch (err) {
+      console.error("Failed to confirm work completion:", err);
+    }
+  };
+
+  const resubmitAfterRejection = async (issueId: string) => {
+    try {
+      // Find the issue and load old submission data
+      const issue = rejected.find((i: any) => i._id === issueId);
+      if (!issue) return;
+
+      // Pre-fill the form with old data
+      setHasOfficialBill(issue.resolutionEvidence?.hasOfficialBill ?? true);
+      setWorkerName(issue.resolutionEvidence?.workerName || "");
+      setWorkerContact(issue.resolutionEvidence?.workerContact || "");
+      setReceiptAmount(issue.finalInvoice?.amount || "");
+      setAfterImage(issue.resolutionEvidence?.afterImage || "");
+
+      // Mark as resubmitting
+      setResubmittingIssue(issue);
+    } catch (err) {
+      console.error("Failed to load for resubmission:", err);
+    }
+  };
+
+  // Pending Owner Review: Tenant submitted, waiting for owner approval (no feedback yet)
+  const pending = issues.filter((i: any) => i.status === "resolved" && !i.isAmountApproved && !i.ownerFeedback && i.responsibility === "tenant");
   
-  const history = issues.filter((i: any) => i.status === "rejected" || (i.status === "resolved" && i.isAmountApproved));
+  // Resubmission Required: Owner rejected with feedback, tenant needs to resubmit
+  const rejected = issues.filter((i: any) => i.status === "resolved" && !i.isAmountApproved && i.ownerFeedback && i.responsibility === "tenant");
+  
+  // History: Approved tenant work + professional work
+  const history = issues.filter((i: any) => (i.status === "resolved" && i.isAmountApproved) || (i.status === "resolved" && i.responsibility === "owner"));
 
   return (
     <div className="p-4 md:p-10 lg:p-12 max-w-7xl mx-auto">
@@ -290,6 +335,39 @@ const submitResolution = async () => {
         </div>
       )}
 
+      {/* REJECTED SUBMISSIONS - NEED RESUBMISSION */}
+      {rejected.length > 0 && (
+        <div className="space-y-6 mb-16">
+            <h2 className="text-[10px] font-black text-red-600 uppercase tracking-[0.3em] ml-2">Resubmission Required</h2>
+            {rejected.map((issue: any) => (
+                <div key={issue._id} className="bg-red-50/40 p-8 rounded-[40px] border border-red-100 flex flex-col gap-6">
+                    <div className="flex-1">
+                        <div className="flex flex-wrap gap-3 mb-4">
+                            <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-[9px] font-black uppercase tracking-widest">Rejected</span>
+                        </div>
+                        <h3 className="text-xl font-black text-[#1F2937] uppercase tracking-tight">{issue.itemName} — {issue.roomName}</h3>
+                        
+                        <div className="mt-4 p-4 bg-white rounded-2xl border border-red-200">
+                            <p className="text-[9px] font-black text-red-600 uppercase mb-2 flex items-center gap-2">
+                                <AlertCircle size={14} /> Owner's Feedback:
+                            </p>
+                            <p className="text-sm text-red-700 font-medium">"{issue.ownerFeedback}"</p>
+                        </div>
+                        
+                        <p className="text-[10px] text-gray-400 mt-4 uppercase font-bold">Est. Cost: ₹{issue.estimatedCost}</p>
+                    </div>
+                    
+                    <button
+                      onClick={() => resubmitAfterRejection(issue._id)}
+                      className="bg-red-600 text-white px-8 py-4 rounded-3xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:bg-red-700 transition-all active:scale-95"
+                    >
+                      Resubmit with Corrections
+                    </button>
+                </div>
+            ))}
+        </div>
+      )}
+
       {/* OWNER-ASSIGNED CONTRACTORS */}
       {ownerAssigned.length > 0 && (
         <div className="space-y-6 mb-16">
@@ -326,10 +404,17 @@ const submitResolution = async () => {
                             </div>
                         )}
                         
-                        <div className="mt-4 p-4 bg-blue-50 rounded-2xl border border-blue-100">
+                        <div className="mt-6 p-4 bg-blue-50 rounded-2xl border border-blue-100 flex items-center justify-between gap-4">
                             <p className="text-[10px] font-black text-blue-600 uppercase flex items-center gap-2 tracking-widest">
-                                <Info size={12}/> Waiting for professional to arrive
+                                <Wrench size={12}/> Work in progress
                             </p>
+                            <button
+                              onClick={() => confirmWorkComplete(issue._id)}
+                              className="bg-purple-600 text-white px-6 py-2 rounded-2xl font-black text-[9px] uppercase tracking-widest hover:bg-purple-700 transition-colors whitespace-nowrap flex items-center gap-2 shadow-lg"
+                            >
+                              <CheckCircle2 size={14} />
+                              Work Complete
+                            </button>
                         </div>
                     </div>
                     
@@ -475,43 +560,52 @@ const submitResolution = async () => {
 
       {/* RESOLUTION MODAL */}
       <AnimatePresence>
-        {resolvingIssue && (
+        {(resolvingIssue || resubmittingIssue) && (
           <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
             <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white w-full max-w-md rounded-[48px] p-10 shadow-2xl">
-              <h2 className="text-2xl font-black text-[#1F2937] mb-2 leading-none">Repair Finalization</h2>
-              <p className="text-gray-400 text-sm mb-10 font-medium tracking-tight">Provide verification for reimbursement protocol.</p>
+              <h2 className="text-2xl font-black text-[#1F2937] mb-2 leading-none">{resubmittingIssue ? "Resubmit Evidence" : "Repair Finalization"}</h2>
+              <p className="text-gray-400 text-sm mb-10 font-medium tracking-tight">{resubmittingIssue ? "Address the feedback and resubmit corrected evidence." : "Provide verification for reimbursement protocol."}</p>
 
-              {resolvingIssue.responsibility === 'owner' ? (
-                <div className="space-y-6">
-                  <div className="flex bg-gray-100 p-1.5 rounded-2xl">
-                    <button onClick={() => setHasOfficialBill(true)} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${hasOfficialBill ? 'bg-white shadow-sm text-teal-600' : 'text-gray-400'}`}>Official Bill</button>
-                    <button onClick={() => setHasOfficialBill(false)} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${!hasOfficialBill ? 'bg-white shadow-sm text-teal-600' : 'text-gray-400'}`}>Local Worker</button>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-400 uppercase ml-2 flex items-center gap-2"><IndianRupee size={12}/> Amount Paid</label>
-                    <input type="number" className="w-full p-5 bg-gray-50 rounded-2xl font-black text-emerald-600 outline-none" value={receiptAmount} onChange={(e) => setReceiptAmount(e.target.value)}/>
-                  </div>
-
-                  {!hasOfficialBill && (
-                    <div className="grid grid-cols-2 gap-4">
-                      <input className="p-4 bg-gray-50 rounded-2xl text-xs font-bold outline-none" placeholder="Worker Name" value={workerName} onChange={(e) => setWorkerName(e.target.value)}/>
-                      <input className="p-4 bg-gray-50 rounded-2xl text-xs font-bold outline-none" placeholder="Phone" value={workerContact} onChange={(e) => setWorkerContact(e.target.value)}/>
-                    </div>
-                  )}
-
-                  <button onClick={() => startCamera("after")} className="w-full py-8 border-2 border-dashed border-gray-200 rounded-3xl flex flex-col items-center gap-2 text-gray-400 hover:text-[#0D9488] transition-all">
-                    {afterImage ? <img src={afterImage} className="h-16 w-16 object-cover rounded-xl" /> : <Camera size={32}/>}
-                    <span className="text-[10px] font-black uppercase">{afterImage ? "Evidence Secured" : "Capture Verification Photo"}</span>
-                  </button>
+              <div className="space-y-6">
+                <div className="flex bg-gray-100 p-1.5 rounded-2xl">
+                  <button onClick={() => setHasOfficialBill(true)} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${hasOfficialBill ? 'bg-white shadow-sm text-teal-600' : 'text-gray-400'}`}>Official Bill</button>
+                  <button onClick={() => setHasOfficialBill(false)} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${!hasOfficialBill ? 'bg-white shadow-sm text-teal-600' : 'text-gray-400'}`}>Local Worker</button>
                 </div>
-              ) : (
-                <div className="p-6 bg-orange-50 border border-orange-100 rounded-3xl mb-8"><p className="text-xs text-orange-800 font-medium">By sealing, you confirm repair completion at your own cost per the threshold agreement.</p></div>
-              )}
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-400 uppercase ml-2 flex items-center gap-2"><IndianRupee size={12}/> Amount Paid</label>
+                  <input type="number" className="w-full p-5 bg-gray-50 rounded-2xl font-black text-emerald-600 outline-none" value={receiptAmount} onChange={(e) => setReceiptAmount(e.target.value)}/>
+                </div>
+
+                {!hasOfficialBill && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <input className="p-4 bg-gray-50 rounded-2xl text-xs font-bold outline-none" placeholder="Worker Name" value={workerName} onChange={(e) => setWorkerName(e.target.value)}/>
+                    <input className="p-4 bg-gray-50 rounded-2xl text-xs font-bold outline-none" placeholder="Phone" value={workerContact} onChange={(e) => setWorkerContact(e.target.value)}/>
+                  </div>
+                )}
+
+                <button onClick={() => startCamera("after")} className="w-full py-8 border-2 border-dashed border-gray-200 rounded-3xl flex flex-col items-center gap-2 text-gray-400 hover:text-[#0D9488] transition-all">
+                  {afterImage ? <img src={afterImage} className="h-16 w-16 object-cover rounded-xl" /> : <Camera size={32}/>}
+                  <span className="text-[10px] font-black uppercase">{afterImage ? "Evidence Secured" : "Capture Verification Photo"}</span>
+                </button>
+
+                {resubmittingIssue && (
+                  <div className="p-4 bg-orange-50 border border-orange-200 rounded-2xl">
+                    <p className="text-[9px] text-orange-700 font-black uppercase mb-2">Previous Feedback:</p>
+                    <p className="text-xs text-orange-700">"{resubmittingIssue.ownerFeedback}"</p>
+                  </div>
+                )}
+
+                {(resolvingIssue || resubmittingIssue)?.responsibility === 'tenant' && (
+                  <div className="p-4 bg-orange-50 border border-orange-100 rounded-2xl">
+                    <p className="text-xs text-orange-800 font-medium">You're completing this repair at your own cost per the threshold agreement. Submit your evidence for documentation.</p>
+                  </div>
+                )}
+              </div>
 
               <div className="flex gap-4 mt-12">
-                <button onClick={() => setResolvingIssue(null)} className="flex-1 py-4 text-gray-400 font-bold text-[10px] uppercase">Cancel</button>
-                <button onClick={submitResolution} disabled={resolvingIssue.responsibility === 'owner' && (!receiptAmount || !afterImage)} className="flex-[2] py-5 bg-[#1F2937] text-white rounded-3xl font-black text-xs uppercase tracking-widest shadow-2xl">Seal & Submit</button>
+                <button onClick={() => { setResolvingIssue(null); setResubmittingIssue(null); }} className="flex-1 py-4 text-gray-400 font-bold text-[10px] uppercase">Cancel</button>
+                <button onClick={submitResolution} disabled={!receiptAmount || !afterImage} className="flex-[2] py-5 bg-[#1F2937] text-white rounded-3xl font-black text-xs uppercase tracking-widest shadow-2xl disabled:opacity-50">{resubmittingIssue ? "Resubmit" : "Seal & Submit"}</button>
               </div>
             </motion.div>
           </div>

@@ -8,7 +8,7 @@ export async function PUT(request: Request) {
   try {
     await connectToDatabase();
     const body = await request.json();
-    const { issueId, action, contractorName, contractorContact, arrival, feedback, receiptAmount, workerName, workerContact, hasOfficialBill, afterImage } = body;
+    const { issueId, action, contractorName, contractorContact, arrival, feedback, receiptAmount, workerName, workerContact, hasOfficialBill, afterImage, isResubmission } = body;
 
     const issue = await Maintenance.findById(issueId);
     if (!issue) return NextResponse.json({ error: "Issue not found" }, { status: 404 });
@@ -22,6 +22,7 @@ export async function PUT(request: Request) {
     } 
     else if (action === "tenant_fix") {
       updateData.status = "tenant_led_fix";
+      updateData.responsibility = "tenant"; // Update responsibility so tenant can submit evidence
     } 
     else if (action === "reject") {
       updateData.status = "rejected";
@@ -48,8 +49,13 @@ export async function PUT(request: Request) {
         workerName,
         workerContact,
         hasOfficialBill,
-        afterImage: uploadedUrl // This fills the blank green box in your screenshot
+        afterImage: uploadedUrl
       };
+
+      // If this is a resubmission after rejection, clear the feedback
+      if (isResubmission) {
+        updateData.ownerFeedback = null;
+      }
     }
 
     // 3. OWNER VERIFICATION (Moves to History)
@@ -57,10 +63,10 @@ export async function PUT(request: Request) {
       updateData.isAmountApproved = true;
     }
 
-    // 4. CORRECTION LOOP: Owner Disputes Verification
+    // 4. OWNER REJECTS TENANT SUBMISSION (Keeps status as resolved, adds feedback)
     if (action === "dispute_verification") {
-      updateData.status = "tenant_led_fix";
-      updateData.isAmountApproved = false;
+      // Keep status as resolved, just add ownerFeedback
+      // This allows tenant to see it needs resubmission
       updateData.ownerFeedback = feedback;
     }
 
@@ -71,6 +77,20 @@ export async function PUT(request: Request) {
         workerVerified: true,
         workerVerifiedAt: new Date()
       };
+    }
+
+    // 6. TENANT CONFIRMS PROFESSIONAL WORK IS COMPLETE
+    if (action === "professional_work_complete") {
+      updateData.status = "resolved";
+      // Preserve existing contractor info for owner reference
+    }
+
+    // 7. TENANT RESUBMITS AFTER REJECTION (Clears feedback, stays in resolved for reediting)
+    if (action === "resubmit_after_rejection") {
+      // Clear the feedback so tenant can modify and resubmit
+      updateData.ownerFeedback = null;
+      updateData.isAmountApproved = false;
+      // Status stays "resolved" - tenant needs to update evidence and submit again
     }
 
     const updatedIssue = await Maintenance.findByIdAndUpdate(issueId, { $set: updateData }, { new: true }).populate("propertyId");

@@ -14,6 +14,7 @@ import {
   Hammer,
   AlertTriangle,
   BadgeCheck,
+  Clock
 } from "lucide-react";
 
 export default function MaintenanceQueue() {
@@ -23,6 +24,7 @@ export default function MaintenanceQueue() {
   const [selectedIssue, setSelectedIssue] = useState<string | null>(null);
   const [cName, setCName] = useState("");
   const [cPhone, setCPhone] = useState("");
+  const [cArrival, setCArrival] = useState("");
 
   // Dispute Loop States
   const [disputeIssue, setDisputeIssue] = useState<string | null>(null);
@@ -86,6 +88,7 @@ const handleVerifyResolution = async (issueId: string) => {
       if (action === "approve_contractor") {
         body.contractorName = cName;
         body.contractorContact = cPhone;
+        body.arrival = cArrival;
       }
 
       const res = await fetch("/api/maintenance/action", {
@@ -100,6 +103,7 @@ const handleVerifyResolution = async (issueId: string) => {
         setSelectedIssue(null);
         setCName("");
         setCPhone("");
+        setCArrival("");
         fetchQueue();
       }
     } catch (err) {
@@ -164,15 +168,9 @@ const handleVerifyResolution = async (issueId: string) => {
     );
   }
 
-  // Direct Actions Required: Only owner-responsible items (not silent minor repairs)
+  // Direct Actions Required: Only initial reported items
   const actionable = issues.filter((i: any) =>
-    (["reported", "owner_led_fix"].includes(i.status)) ||
-    (i.status === "tenant_led_fix" && i.responsibility === "owner" && !i.ownerFeedback)
-  );
-
-  // Disputed Items: Reverted to tenant_led_fix after owner dismissal
-  const disputed = issues.filter(
-    (i: any) => i.status === "tenant_led_fix" && i.responsibility === "owner" && i.ownerFeedback
+    i.status === "reported"
   );
 
   // Property Logs: Silent notifications for minor tenant-led repairs (tenant responsibility)
@@ -180,14 +178,22 @@ const handleVerifyResolution = async (issueId: string) => {
     (i: any) => i.status === "tenant_led_fix" && i.responsibility === "tenant"
   );
 
+  // Verification Queue: Tenant-submitted evidence awaiting owner approval
+  // Does NOT include items waiting for tenant resubmission (those have ownerFeedback)
   const verificationQueue = issues.filter(
-    (i: any) => i.status === "resolved" && !i.isAmountApproved
+    (i: any) => i.status === "resolved" && !i.isAmountApproved && !i.ownerFeedback && i.responsibility === "tenant"
   );
 
+  // Waiting for Response: Items rejected by owner, waiting for tenant resubmission
+  const waitingForResponse = issues.filter(
+    (i: any) => i.status === "resolved" && !i.isAmountApproved && i.ownerFeedback && i.responsibility === "tenant"
+  );
+
+  // History: Approved tenant work + professional work
   const history = issues.filter(
     (i: any) =>
-      i.status === "rejected" ||
-      (i.status === "resolved" && i.isAmountApproved)
+      (i.status === "resolved" && i.isAmountApproved) ||
+      (i.status === "resolved" && i.responsibility === "owner") // Professional work goes here
   );
 
   return (
@@ -261,25 +267,36 @@ const handleVerifyResolution = async (issueId: string) => {
                   <motion.div
                     initial={{ height: 0 }}
                     animate={{ height: "auto" }}
-                    className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 p-6 bg-gray-50 rounded-3xl"
+                    className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4 p-6 bg-gray-50 rounded-3xl"
                   >
                     <input
                       placeholder="Contractor Name"
                       className="p-4 bg-white rounded-2xl text-xs font-bold border-none outline-none"
+                      value={cName}
                       onChange={(e) => setCName(e.target.value)}
                     />
 
                     <input
                       placeholder="Worker Contact"
                       className="p-4 bg-white rounded-2xl text-xs font-bold border-none outline-none"
+                      value={cPhone}
                       onChange={(e) => setCPhone(e.target.value)}
+                    />
+
+                    <input
+                      placeholder="Expected Arrival"
+                      type="datetime-local"
+                      className="p-4 bg-white rounded-2xl text-xs font-bold border-none outline-none"
+                      value={cArrival}
+                      onChange={(e) => setCArrival(e.target.value)}
                     />
 
                     <button
                       onClick={() =>
                         handleAction(issue._id, "approve_contractor")
                       }
-                      className="bg-[#1F2937] text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg"
+                      disabled={!cName || !cPhone || !cArrival}
+                      className="bg-[#1F2937] text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Authorize Fixer
                     </button>
@@ -308,14 +325,6 @@ const handleVerifyResolution = async (issueId: string) => {
                     </button>
                   </>
                 )}
-
-                <button
-                  onClick={() => handleAction(issue._id, "reject")}
-                  className="text-[9px] font-black text-red-400 uppercase tracking-widest hover:text-red-600 transition-colors flex items-center justify-center gap-2 mt-4"
-                >
-                  <XCircle size={14} />
-                  Dispute Claim
-                </button>
               </div>
             </motion.div>
           ))}
@@ -356,14 +365,14 @@ const handleVerifyResolution = async (issueId: string) => {
           </section>
         )}
 
-        {/* DISPUTED ITEMS */}
-        {disputed.length > 0 && (
+        {/* WAITING FOR RESPONSE - Rejected & Awaiting Resubmission */}
+        {waitingForResponse.length > 0 && (
           <section className="space-y-6">
             <h2 className="text-[10px] font-black text-orange-600 uppercase tracking-[0.3em] ml-2">
-              Back to Tenant (Disputed)
+              Awaiting Tenant Resubmission
             </h2>
 
-            {disputed.map((issue: any) => (
+            {waitingForResponse.map((issue: any) => (
               <motion.div
                 key={issue._id}
                 initial={{ opacity: 0 }}
@@ -385,10 +394,7 @@ const handleVerifyResolution = async (issueId: string) => {
                 <div className="flex-1">
                   <div className="flex flex-wrap gap-3 mb-4">
                     <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-[9px] font-black uppercase tracking-widest">
-                      Disputed
-                    </span>
-                    <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-[9px] font-black uppercase tracking-widest">
-                      Awaiting Tenant Correction
+                      Awaiting Resubmission
                     </span>
                   </div>
 
@@ -398,23 +404,23 @@ const handleVerifyResolution = async (issueId: string) => {
 
                   <div className="mt-6 p-4 bg-white rounded-2xl border border-orange-200">
                     <p className="text-[9px] font-black text-orange-600 uppercase mb-2 flex items-center gap-2">
-                      <AlertTriangle size={14} /> Your Feedback:
+                      <AlertTriangle size={14} /> Your Rejection Reason:
                     </p>
                     <p className="text-sm text-gray-700 font-medium">"{issue.ownerFeedback}"</p>
                   </div>
 
                   <p className="text-[10px] text-gray-400 uppercase mt-4 font-bold">
-                    Amount Submitted: ₹{issue.finalInvoice?.amount} • Est. Cost: ₹{issue.estimatedCost}
+                    Previously Submitted: ₹{issue.finalInvoice?.amount}
                   </p>
                 </div>
 
                 {/* INFO */}
                 <div className="lg:w-64 flex flex-col justify-center items-center text-center">
                   <div className="w-12 h-12 bg-orange-100 rounded-2xl flex items-center justify-center text-orange-600 mb-4">
-                    <AlertTriangle size={24} />
+                    <Clock size={24} />
                   </div>
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                    Awaiting Tenant Response
+                    Tenant Resubmitting
                   </p>
                 </div>
               </motion.div>
@@ -426,7 +432,7 @@ const handleVerifyResolution = async (issueId: string) => {
         {verificationQueue.length > 0 && (
           <section className="space-y-6">
             <h2 className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.3em] ml-2">
-              Verification Queue (Awaiting Audit)
+              Verification Queue (Tenant-Submitted Evidence)
             </h2>
 
             {verificationQueue.map((issue: any) => (
@@ -441,14 +447,21 @@ const handleVerifyResolution = async (issueId: string) => {
     <div className="space-y-2">
         <p className="text-[8px] font-black text-gray-400 uppercase text-center">Initial Fault</p>
         <div className="w-40 h-40 rounded-3xl bg-white overflow-hidden border border-gray-100">
-            <img src={issue.issueImages?.[0]?.url} className="w-full h-full object-cover grayscale-[40%]" alt="Before" />
+            {issue.issueImages?.[0]?.url ? (
+              <img src={issue.issueImages[0].url} className="w-full h-full object-cover grayscale-[40%]" alt="Before" />
+            ) : (
+              <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-300"><Camera size={32}/></div>
+            )}
         </div>
     </div>
     <div className="space-y-2">
         <p className="text-[8px] font-black text-emerald-600 uppercase text-center">Resolution Proof</p>
         <div className="w-40 h-40 rounded-3xl bg-emerald-100 overflow-hidden border-2 border-emerald-400 shadow-xl">
-            {/* ✅ FIXED: Accessing the correct nested property for the After Photo */}
-            <img src={issue.resolutionEvidence?.afterImage} className="w-full h-full object-cover" alt="After" />
+            {issue.resolutionEvidence?.afterImage ? (
+              <img src={issue.resolutionEvidence.afterImage} className="w-full h-full object-cover" alt="After" />
+            ) : (
+              <div className="w-full h-full bg-emerald-200 flex items-center justify-center text-emerald-400"><Camera size={32}/></div>
+            )}
         </div>
     </div>
 </div>
@@ -509,12 +522,15 @@ const handleVerifyResolution = async (issueId: string) => {
                     </button>
                   )}
 
-                  <button
-                    onClick={() => setDisputeIssue(issue._id)}
-                    className="text-[9px] font-black text-gray-400 uppercase tracking-widest hover:text-red-500 transition-colors text-center py-2"
-                  >
-                    Dispute Amount
-                  </button>
+                  {/* Dispute Amount - Only for Tenant-Submitted Evidence */}
+                  {issue.responsibility === "tenant" && (
+                    <button
+                      onClick={() => setDisputeIssue(issue._id)}
+                      className="text-[9px] font-black text-gray-400 uppercase tracking-widest hover:text-red-500 transition-colors text-center py-2"
+                    >
+                      Reject & Send Back
+                    </button>
+                  )}
                 </div>
               </motion.div>
             ))}
@@ -559,8 +575,8 @@ const handleVerifyResolution = async (issueId: string) => {
                       </p>
 
                       <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">
-                        Responsible: {issue.responsibility} • Final Cost: ₹
-                        {issue.finalInvoice?.amount || 0}
+                        {issue.responsibility === "owner" ? "Professional Assigned" : "Responsible: " + issue.responsibility} • Cost: ₹
+                        {issue.finalInvoice?.amount || issue.estimatedCost || 0}
                       </p>
                     </div>
                   </div>
@@ -573,11 +589,17 @@ const handleVerifyResolution = async (issueId: string) => {
                     <p
                       className={`text-[9px] font-black uppercase mt-1 ${
                         issue.status === "resolved"
-                          ? "text-teal-600"
+                          ? issue.responsibility === "owner"
+                            ? "text-purple-600"
+                            : "text-teal-600"
                           : "text-red-400"
                       }`}
                     >
-                      Vault Secured
+                      {issue.status === "resolved"
+                        ? issue.responsibility === "owner"
+                          ? "Professional Fixed"
+                          : "Vault Secured"
+                        : "Rejected"}
                     </p>
                   </div>
                 </div>
@@ -586,7 +608,7 @@ const handleVerifyResolution = async (issueId: string) => {
           </div>
         </section>
 
-        {/* DISPUTE MODAL */}
+        {/* REJECTION MODAL */}
         <AnimatePresence>
           {disputeIssue && (
             <div className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
@@ -596,18 +618,18 @@ const handleVerifyResolution = async (issueId: string) => {
                 exit={{ scale: 0.9 }}
                 className="bg-white w-full max-w-md rounded-[48px] p-10 shadow-2xl"
               >
-                <h2 className="text-2xl font-black text-[#1F2937] mb-2 leading-none">Dismiss Resolution</h2>
+                <h2 className="text-2xl font-black text-[#1F2937] mb-2 leading-none">Reject Submission</h2>
                 <p className="text-gray-400 text-sm mb-8 font-medium tracking-tight">
-                  Provide your reason for dismissing this resolution. The tenant will be notified.
+                  Provide your reason for rejecting this submission. The tenant will be notified and must resubmit.
                 </p>
 
                 <div className="space-y-4">
-                  <label className="text-[10px] font-black text-gray-400 uppercase block">Your Feedback</label>
+                  <label className="text-[10px] font-black text-gray-400 uppercase block">Rejection Reason</label>
                   <textarea 
                     value={disputeReason}
                     onChange={(e) => setDisputeReason(e.target.value)}
-                    className="w-full p-4 bg-gray-50 rounded-2xl text-sm font-bold outline-none border border-gray-100 focus:border-orange-500 resize-none h-24"
-                    placeholder="e.g., Market rate for this repair is ₹400, why is the bill ₹900?"
+                    className="w-full p-4 bg-gray-50 rounded-2xl text-sm font-bold outline-none border border-gray-100 focus:border-red-500 resize-none h-24"
+                    placeholder="e.g., Photo quality is poor, bill amount is too high, need better evidence..."
                   />
                 </div>
 
@@ -624,9 +646,9 @@ const handleVerifyResolution = async (issueId: string) => {
                   <button 
                     onClick={() => handleDisputeVerification(disputeIssue)}
                     disabled={!disputeReason.trim()}
-                    className="flex-[2] py-5 bg-orange-600 text-white rounded-3xl font-black text-xs uppercase tracking-widest shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-[2] py-5 bg-red-600 text-white rounded-3xl font-black text-xs uppercase tracking-widest shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Send Back to Tenant
+                    Reject & Notify
                   </button>
                 </div>
               </motion.div>
