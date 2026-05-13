@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import Payment from "@/models/Payment";
 import Property from "@/models/Property";
-import User from "@/models/User"; // ✅ Added this import
+import Maintenance from "@/models/Maintenance";
+import User from "@/models/User";
 
 export async function GET(request: Request) {
   try {
@@ -10,34 +11,9 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("userId");
 
-    if (!userId) {
-      return NextResponse.json({ error: "User ID is required" }, { status: 400 });
-    }
-
-    // 1. Fetch the User first to get their linked propertyId
     const user = await User.findById(userId);
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
+    const property = await Property.findById(user.propertyId).populate("ownerId");
 
-    // 2. The "Two-Way Street" search logic
-    const property = await Property.findOne({ 
-      $or: [
-        { tenantId: userId },       // Option A: Property points to Tenant
-        { _id: user.propertyId }    // Option B: Tenant points to Property
-      ] 
-    }).populate("ownerId");
-
-    if (!property) {
-      return NextResponse.json({ 
-        error: "No active lease found for this User ID in the database.",
-        ledger: [],
-        stats: { totalPaid: 0, pendingCount: 0 } 
-      }, { status: 200 });
-    }
-
-    // 3. Generate months from leaseStartDate to Today
-    // Current Date: February 15, 2026
     const startDate = new Date(property.leaseStartDate);
     const currentDate = new Date();
     const ledger = [];
@@ -48,43 +24,57 @@ export async function GET(request: Request) {
       const monthName = tempDate.toLocaleString('default', { month: 'long' });
       const year = tempDate.getFullYear();
 
-      console.log(`Searching for payment: propertyId=${property._id}, tenantId=${userId}, month=${monthName}, year=${year}`);
-
       const paymentRecord = await Payment.findOne({
         propertyId: property._id,
         tenantId: userId,
         month: monthName,
-        year: year,
-        type: "rent"
+        year: year
       });
 
-      console.log(`Payment found for ${monthName} ${year}:`, paymentRecord ? "YES" : "NO");
+      let status = paymentRecord ? "Paid" : "Pending";
+      let finalAmount = property.rentAmount;
+      let breakdown = { base: property.rentAmount, credit: 0, penalty: 0 };
+
+      if (status === "Pending") {
+        // 1. SCALING MAINTENANCE CREDITS
+        const approvedRepairs = await Maintenance.find({
+          tenantId: userId,
+          responsibility: "owner",
+          isAmountApproved: true,
+          isCredited: { $ne: true } // Only fetch if not already used in a previous month
+        });
+
+        const totalCredit = approvedRepairs.reduce((sum, item) => sum + item.finalInvoice.amount, 0);
+        breakdown.credit = totalCredit;
+
+        // 2. DYNAMIC PENALTY LOGIC (Owner controlled)
+        if (property.latePenaltyEnabled) {
+          const dayOfMonth = currentDate.getDate();
+          if (dayOfMonth > 10) {
+            breakdown.penalty = Math.round(property.rentAmount * 0.10); // 10%
+          } else if (dayOfMonth > 5) {
+            breakdown.penalty = Math.round(property.rentAmount * 0.05); // 5%
+          }
+        }
+        finalAmount = (breakdown.base + breakdown.penalty) - breakdown.credit;
+      } else {
+        finalAmount = paymentRecord.totalAmountPaid;
+      }
 
       ledger.push({
         month: monthName,
         year: year,
-        amount: property.rentAmount,
-        status: paymentRecord ? "Paid" : "Pending",
-        transactionId: paymentRecord?.gatewayTransactionId || null,
+        status,
+        amount: finalAmount,
+        breakdown: paymentRecord ? null : breakdown, // Show breakdown only for pending
         date: paymentRecord?.createdAt || null
       });
 
       tempDate.setMonth(tempDate.getMonth() + 1);
     }
 
-    const stats = {
-      totalPaid: ledger.filter(l => l.status === "Paid").length * property.rentAmount,
-      pendingCount: ledger.filter(l => l.status === "Pending").length
-    };
-
-    return NextResponse.json({ 
-      property,
-      ledger: ledger.reverse(), 
-      stats 
-    }, { status: 200 });
-
+    return NextResponse.json({ property, ledger: ledger.reverse() });
   } catch (error: any) {
-    console.error("LEDGER_ERROR:", error.message);
-    return NextResponse.json({ error: "Server Error: " + error.message }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

@@ -1,63 +1,68 @@
 "use client";
-import { useState, useEffect } from "react";
-import { Loader2, CheckCircle2, ArrowRight, ShieldCheck, Home, Download, FileText, CreditCard } from "lucide-react";
-import { generateReceipt } from "@/lib/generateReceipt";
+
+import React, { useState, useEffect } from "react";
+import { 
+  Loader2, BadgeCheck, IndianRupee, AlertTriangle, 
+  ArrowDownCircle, CreditCard, Download, Clock, History, ShieldCheck,
+} from "lucide-react";
 import Script from "next/script";
+import { motion, AnimatePresence } from "framer-motion";
 
 declare var Razorpay: any;
 
 export default function TenantLedger() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [payingMonth, setPayingMonth] = useState<string | null>(null);
 
-  useEffect(() => { fetchLedger(); }, []);
+  useEffect(() => {
+    fetchLedger();
+  }, []);
 
   const fetchLedger = async () => {
     try {
       const userId = localStorage.getItem("userId");
       const res = await fetch(`/api/payments/ledger?userId=${userId}`);
       const d = await res.json();
-      if (res.ok && d.property) setData(d);
-      else setError(d.error || "No active lease found.");
-    } catch (err) { setError("Network error."); }
-    finally { setLoading(false); }
+      if (res.ok) setData(d);
+    } catch (err) {
+      console.error("Ledger sync failed:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleRentPayment = async (month: string, year: number) => {
+  const handlePayment = async (item: any) => {
+    setPayingMonth(item.month);
     try {
-      setLoading(true);
-      const amount = data.property.rentAmount;
-
-      // 1. Create Real Razorpay Order
+      // 1. Create Order
       const orderRes = await fetch("/api/payments/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          amount: amount, 
-          receiptId: `rent_${month}_${year}_${localStorage.getItem("userId")}` 
+          amount: item.amount, 
+          receiptId: `rent_${item.month}_${item.year}_${localStorage.getItem("userId")}` 
         }),
       });
       const orderData = await orderRes.json();
 
-      // 2. Open Razorpay Modal
+      // 2. Open Razorpay
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         amount: orderData.amount,
         currency: "INR",
-        name: "RentEase Monthly",
-        description: `Rent for ${month} ${year}`,
+        name: "RentEase Vault",
+        description: `Monthly Rent: ${item.month} ${item.year}`,
         order_id: orderData.id,
         handler: async function (response: any) {
-          // 3. Verify Signature on Backend
           const verifyRes = await fetch("/api/payments/verify-rent", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               userId: localStorage.getItem("userId"),
-              month,
-              year,
-              amount,
+              month: item.month,
+              year: item.year,
+              amount: item.amount,
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
@@ -65,61 +70,123 @@ export default function TenantLedger() {
           });
 
           if (verifyRes.ok) {
-            await fetchLedger(); // Refresh UI
-          } else {
-            alert("Payment signature verification failed.");
+            alert("Rent Verified & Secured.");
+            fetchLedger();
           }
         },
         prefill: { email: localStorage.getItem("userEmail") || "" },
-        theme: { color: "#0052CC" },
+        theme: { color: "#1F2937" },
       };
 
       const rzp = new Razorpay(options);
       rzp.open();
     } catch (err) {
-      console.error(err);
-      alert("Gateway error.");
+      alert("Gateway connection failed.");
     } finally {
-      setLoading(false);
+      setPayingMonth(null);
     }
   };
 
-  if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-blue-600" size={40} /></div>;
+  if (loading) return (
+    <div className="h-screen flex flex-col items-center justify-center gap-4">
+      <Loader2 className="animate-spin text-[#0052CC]" size={40} />
+      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Synchronizing Financial Vault...</p>
+    </div>
+  );
 
   return (
     <>
       <Script id="razorpay-checkout" src="https://checkout.razorpay.com/v1/checkout.js" />
-      <div className="p-6 md:p-12 max-w-6xl mx-auto">
-        {/* ... Header and Overview Cards stay the same ... */}
-        
-        {/* DYNAMIC MONTHLY ROWS */}
-        <div className="bg-white rounded-[48px] border border-gray-100 overflow-hidden shadow-sm">
-          {data.ledger?.map((item: any, i: number) => (
-            <div key={i} className="p-8 border-b border-gray-50 flex flex-col md:flex-row justify-between items-center gap-6">
-              <div>
-                <h4 className="font-bold text-[#1F2937] text-xl">{item.month} {item.year}</h4>
-                <p className="text-[10px] font-bold text-gray-400 uppercase mt-1">Due: ₹{item.amount?.toLocaleString()}</p>
-              </div>
+      <div className="p-4 md:p-10 lg:p-12 max-w-6xl mx-auto space-y-12">
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+          <div>
+            <h1 className="text-4xl font-black text-[#1F2937] tracking-tight italic">Financial Ledger</h1>
+            <p className="text-gray-400 font-medium mt-2 uppercase text-[10px] tracking-[0.2em]">Automated Auditing & Maintenance Credits</p>
+          </div>
+          <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex items-center gap-6">
+             <div>
+               <p className="text-[9px] font-black text-gray-400 uppercase mb-1">On-Time Status</p>
+               <p className="text-sm font-black text-emerald-600 uppercase tracking-tighter">Excellent</p>
+             </div>
+             <div className="w-px h-8 bg-gray-100" />
+             <ShieldCheck className="text-emerald-500" size={24} />
+          </div>
+        </header>
 
-              {item.status === "Paid" ? (
-                <div className="flex items-center gap-6">
-                  <div className="flex items-center gap-3 text-emerald-600 bg-emerald-50 px-6 py-3 rounded-2xl border border-emerald-100">
-                    <CheckCircle2 size={20} />
-                    <span className="text-[10px] font-black uppercase tracking-widest">Vault Secured</span>
+        <div className="space-y-6">
+          {data?.ledger.map((item: any, i: number) => (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }} 
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.1 }}
+              key={i} 
+              className={`p-8 rounded-[48px] border transition-all ${
+                item.status === 'Paid' 
+                  ? 'bg-white border-gray-100' 
+                  : 'bg-blue-50/40 border-blue-100 shadow-xl shadow-blue-900/5'
+              }`}
+            >
+              <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-10">
+                <div className="shrink-0">
+                  <h3 className="text-3xl font-black text-[#1F2937] leading-none">{item.month}</h3>
+                  <p className="text-lg font-bold text-gray-400 mt-1 italic">{item.year}</p>
+                  <div className="flex gap-3 mt-4">
+                    <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                      item.status === 'Paid' ? 'bg-emerald-100 text-emerald-600' : 'bg-[#1F2937] text-white'
+                    }`}>
+                      {item.status}
+                    </span>
                   </div>
-                  <button onClick={() => generateReceipt(item, data.property, "Aman Kumar")} className="p-4 text-gray-400 hover:text-blue-600">
-                    <Download size={20} />
-                  </button>
                 </div>
-              ) : (
-                <button 
-                  onClick={() => handleRentPayment(item.month, item.year)}
-                  className="bg-[#0052CC] text-white px-10 py-4 rounded-2xl font-bold text-xs flex items-center gap-3 shadow-xl"
-                >
-                  <CreditCard size={16} /> Pay Monthly Rent
-                </button>
-              )}
-            </div>
+
+                {item.status === "Pending" && (
+                  <div className="flex-1 w-full max-w-md space-y-3 bg-white/60 backdrop-blur-md p-6 rounded-[32px] border border-blue-100/50">
+                    <div className="flex justify-between text-[11px] font-bold text-gray-400 uppercase">
+                      <span>Standard Rent</span>
+                      <span>₹{item.breakdown.base.toLocaleString()}</span>
+                    </div>
+                    {item.breakdown.credit > 0 && (
+                      <div className="flex justify-between text-[11px] font-black text-emerald-600 uppercase italic">
+                        <span className="flex items-center gap-1.5"><ArrowDownCircle size={12}/> Maintenance Credit</span>
+                        <span>- ₹{item.breakdown.credit.toLocaleString()}</span>
+                      </div>
+                    )}
+                    {item.breakdown.penalty > 0 && (
+                      <div className="flex justify-between text-[11px] font-black text-red-500 uppercase">
+                        <span className="flex items-center gap-1.5"><AlertTriangle size={12}/> Late Fee Protocol</span>
+                        <span>+ ₹{item.breakdown.penalty.toLocaleString()}</span>
+                      </div>
+                    )}
+                    <div className="pt-4 mt-2 border-t border-gray-100 flex justify-between items-center">
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Payable Balance</span>
+                      <span className="text-3xl font-black text-blue-700 tracking-tighter">₹{item.amount.toLocaleString()}</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="w-full lg:w-auto">
+                  {item.status === "Paid" ? (
+                    <div className="flex items-center gap-4">
+                      <div className="px-8 py-5 bg-emerald-50 text-emerald-600 rounded-[24px] border border-emerald-100 font-black text-[10px] uppercase tracking-widest flex items-center gap-2 shadow-sm">
+                        <BadgeCheck size={18}/> Audit Cleared
+                      </div>
+                      <button className="p-5 bg-gray-50 rounded-[24px] text-gray-400 hover:text-blue-600 transition-all shadow-sm">
+                        <Download size={20} />
+                      </button>
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => handlePayment(item)}
+                      disabled={payingMonth === item.month}
+                      className="w-full lg:w-auto px-12 py-6 bg-[#1F2937] text-white rounded-[32px] font-black text-xs uppercase tracking-[0.2em] shadow-2xl shadow-gray-300 flex items-center justify-center gap-3 active:scale-95 transition-all hover:bg-black disabled:opacity-50"
+                    >
+                      {payingMonth === item.month ? <Loader2 className="animate-spin" size={18}/> : <CreditCard size={18}/>}
+                      {payingMonth === item.month ? "Processing Vault..." : "Pay Monthly Invoice"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
           ))}
         </div>
       </div>
