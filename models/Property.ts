@@ -45,6 +45,9 @@ const PropertySchema = new mongoose.Schema({
   },
 
   status: { type: String, enum: ["vacant", "occupied", "under_notice"], default: "vacant" },
+
+  activeExitId: { type: mongoose.Schema.Types.ObjectId, ref: "ExitProcess", default: null },
+  
   pastTenants: [{
     tenantId: mongoose.Schema.Types.ObjectId,
     name: String,

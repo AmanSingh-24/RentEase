@@ -21,27 +21,31 @@ export async function GET(request: Request) {
       type: "rent" 
     }).populate("propertyId tenantId");
 
-    // 3. Generate Virtual "Overdue" status for the Current Month (February)
-    const currentMonth = "February";
-    const currentYear = 2026;
+    // 3. Generate Virtual "Overdue" status dynamically
+    const now = new Date();
+    const currentMonthName = now.toLocaleString('default', { month: 'long' });
+    const currentYear = now.getFullYear();
 
-    const currentMonthReports = await Promise.all(properties.map(async (prop) => {
+    const overdueReports = await Promise.all(properties.map(async (prop) => {
       const tenant = await User.findOne({ propertyId: prop._id });
-      if (!tenant) return null;
+      if (!tenant || !prop.leaseStartDate) return null;
 
-      // Check if February is already in our dbPayments list
+      const leaseStart = new Date(prop.leaseStartDate);
+      
+      // Check if current month is paid
       const hasPaidCurrent = dbPayments.some(p => 
         p.propertyId._id.toString() === prop._id.toString() && 
-        p.month === currentMonth
+        p.month === currentMonthName && 
+        p.year === currentYear
       );
 
-      // If not paid, create a "Virtual Overdue" record for the UI
-      if (!hasPaidCurrent) {
+      // Only show overdue if lease has already started and payment is missing
+      if (!hasPaidCurrent && now >= leaseStart) {
         return {
-          _id: `temp_${prop._id}_feb`,
+          _id: `temp_${prop._id}_curr`,
           propertyId: prop,
           tenantId: tenant,
-          month: currentMonth,
+          month: currentMonthName,
           year: currentYear,
           type: "rent",
           status: "overdue",
@@ -51,11 +55,7 @@ export async function GET(request: Request) {
       return null;
     }));
 
-    // 4. Merge Real History + Virtual Current Status
-    const finalReport = [
-      ...dbPayments, 
-      ...currentMonthReports.filter(Boolean)
-    ];
+    const finalReport = [...dbPayments, ...overdueReports.filter(Boolean)];
 
     return NextResponse.json({ payments: finalReport });
   } catch (error: any) {

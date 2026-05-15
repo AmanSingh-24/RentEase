@@ -67,39 +67,33 @@ export default function OwnerFinancials() {
     });
   }, [payments, filters]);
 
-  // ✅ CHART DATA (Responds to filters)
-  const chartData = useMemo(() => {
-    const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    const activeMonths = filters.month === "all" ? months : [filters.month];
-
-    return activeMonths.map(m => {
-      const monthPayments = filteredData.filter(p => p.month === m);
-      const collected = monthPayments
-        .filter(p => p.status === "completed" || p.status === "verified")
-        .reduce((sum, p) => sum + p.amount, 0);
-      const pending = monthPayments
-        .filter(p => p.status === "overdue")
-        .reduce((sum, p) => sum + p.amount, 0);
-
-      return { 
-        name: m.substring(0, 3), 
-        collected, 
-        pending,
-        total: collected + pending 
-      };
-    }).filter(d => d.total > 0 || filters.month !== "all");
-  }, [filteredData, filters]);
-
-  const stats = useMemo(() => {
-    const totalCollected = filteredData
+// ✅ SAFE CHART DATA
+const chartData = useMemo(() => {
+  const months = ["January", "February", "March", "April", "May", "June"];
+  return months.map(m => {
+    const monthPayments = filteredData.filter(p => p.month === m);
+    const collected = monthPayments
       .filter(p => p.status === "completed" || p.status === "verified")
-      .reduce((sum, p) => sum + p.amount, 0);
-    const totalPending = filteredData
+      .reduce((sum, p) => sum + Number(p.totalAmountPaid || p.amount || 0), 0);
+    const pending = monthPayments
       .filter(p => p.status === "overdue")
-      .reduce((sum, p) => sum + p.amount, 0);
-    
-    return { totalCollected, totalPending, count: filteredData.length };
-  }, [filteredData]);
+      .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+    return { name: m.substring(0, 3), collected, pending };
+  }).filter(d => d.collected > 0 || d.pending > 0);
+}, [filteredData]);
+
+// ✅ SAFE STATS CALCULATION (Prevents NaN)
+const stats = useMemo(() => {
+  const totalCollected = filteredData
+    .filter(p => p.status === "completed" || p.status === "verified")
+    .reduce((sum, p) => sum + Number(p.totalAmountPaid || p.amount || 0), 0);
+  
+  const totalPending = filteredData
+    .filter(p => p.status === "overdue")
+    .reduce((sum, p) => sum + Number(p.amount || p.baseRent || 0), 0);
+  
+  return { totalCollected, totalPending, count: filteredData.length };
+}, [filteredData]);
 
   const togglePenalty = (id: string) => {
     setDisabledPenalties(prev => {
@@ -196,7 +190,9 @@ export default function OwnerFinancials() {
                     </div>
                   </td>
                   <td className="px-6 py-8">
-                    <p className="text-sm font-black text-[#1F2937]">₹{item.amount.toLocaleString()}</p>
+                    <p className="text-sm font-black text-[#1F2937]">
+  ₹{(item.amount ?? item.totalAmountPaid ?? 0).toLocaleString()}
+</p>
                     <p className="text-[9px] font-bold text-gray-400 uppercase mt-1">{item.month} {item.year}</p>
                   </td>
                   <td className="px-6 py-8">

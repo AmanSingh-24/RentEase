@@ -3,43 +3,33 @@
 import React, { useState, useEffect } from "react";
 import { 
   CheckCircle, AlertTriangle, Loader2, ShieldCheck, 
-  X, Calendar, User, Phone, ArrowRight, DollarSign, ImageOff, Camera 
+  X, Calendar, User, Phone, ArrowRight, DollarSign, ImageOff, 
+  Wrench, History, ExternalLink, Clock, HardHat
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
 
 export default function OwnerExitReview({ params }: { params: Promise<{ id: string }> }) {
+  const router = useRouter();
   const resolvedParams = React.use(params);
   const exitId = resolvedParams.id;
 
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
-  
   const [showPhysicalForm, setShowPhysicalForm] = useState(false);
   const [form, setForm] = useState({ inspectionDate: "", inspectorName: "", inspectorContact: "" });
 
-  useEffect(() => {
-    const loadComparison = async () => {
-      try {
-        const res = await fetch(`/api/exit/get-comparison?exitId=${exitId}`);
-        const result = await res.json();
-        if (res.ok) setData(result);
-      } catch (err) { console.error("Data load failed", err); }
-      finally { setLoading(false); }
-    };
-    loadComparison();
-  }, [exitId]);
+  useEffect(() => { fetchData(); }, []);
 
-  // ✅ DATE SCORE LOGIC
-  const getDateScore = (dateInput: any) => {
-    if (!dateInput) return 0;
-    const d = new Date(dateInput);
-    return (d.getFullYear() * 10000) + ((d.getMonth() + 1) * 100) + d.getDate();
+  const fetchData = async () => {
+    try {
+      const res = await fetch(`/api/exit/get-comparison?exitId=${exitId}`);
+      const result = await res.json();
+      if (res.ok) setData(result);
+    } catch (err) { console.error("Fetch failed", err); }
+    finally { setLoading(false); }
   };
-
-  const todayScore = getDateScore(new Date());
-  const moveOutScore = data?.exit?.moveOutDate ? getDateScore(data.exit.moveOutDate) : 99999999;
-  const isPastMoveOut = todayScore >= moveOutScore;
 
   const handleDecision = async (status: string) => {
     setIsProcessing(true);
@@ -49,109 +39,130 @@ export default function OwnerExitReview({ params }: { params: Promise<{ id: stri
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ exitId, status, ...form })
       });
-      if (res.ok) window.location.href = "/dashboard-owner/exit";
+      
+      if (res.ok) {
+        if (status === "inspection_completed") {
+          // Final approval: Push back to main
+          router.push("/dashboard-owner/exit");
+        } else {
+          // Physical assign: Stay here and show new state
+          setShowPhysicalForm(false);
+          await fetchData();
+        }
+      }
     } finally { setIsProcessing(false); }
   };
 
-  if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-blue-600" size={40} /></div>;
+  if (loading || !data || !data.exit) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-blue-600" size={40} /></div>;
+
+  const status = data.exit.status;
+  const today = new Date().toISOString().split('T')[0];
+  const maxDate = new Date(new Date(data.exit.moveOutDate).getTime() - 86400000).toISOString().split('T')[0];
 
   return (
-    <div className="p-10 max-w-7xl mx-auto pb-40">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-16">
+    <div className="p-10 max-w-7xl mx-auto pb-40 space-y-12">
+      <header className="flex justify-between items-end">
         <div>
-          <div className="flex items-center gap-2 text-blue-600 mb-2">
-            <ShieldCheck size={18} />
-            <span className="text-[10px] font-black uppercase tracking-widest">Audit Mode</span>
+          <h1 className="text-4xl font-black text-[#1F2937] tracking-tight italic">Condition Review</h1>
+          <div className="flex items-center gap-3 mt-2">
+            <span className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${status === 'photos_submitted' ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-orange-600'}`}>
+               Current State: {status.replace(/_/g, " ")}
+            </span>
           </div>
-          <h1 className="text-4xl font-black text-[#1F2937] tracking-tight">Condition Review</h1>
-          <p className="text-gray-400 mt-2 font-medium italic">Final comparison before financial settlement.</p>
         </div>
 
         <div className="flex gap-4">
-          {/* ✅ CONDITION 1: Photos just submitted, need approval or physical flag */}
-          {data?.exit?.status === "photos_submitted" ? (
-            <>
-              <button onClick={() => setShowPhysicalForm(true)} className="px-8 py-5 bg-orange-50 text-orange-600 rounded-[24px] font-bold text-xs flex items-center gap-3 border border-orange-100 shadow-sm">
-                <AlertTriangle size={18} /> Flag for Physical Audit
-              </button>
-              <button onClick={() => handleDecision("inspection_completed")} className="px-8 py-5 bg-[#1F2937] text-white rounded-[24px] font-bold text-xs flex items-center gap-3 shadow-xl hover:bg-black transition-all">
-                <CheckCircle size={18} /> Approve Condition
-              </button>
-            </>
-          ) : 
-          /* ✅ CONDITION 2: Condition is approved (either via web or physical), show Settlement button */
-          ["physical_inspection_done", "inspection_completed", "disputed"].includes(data?.exit?.status) ? (
-            <button 
-              disabled={!isPastMoveOut}
-              onClick={() => window.location.href = `/dashboard-owner/exit/${exitId}/settlement`}
-              className={`px-8 py-5 rounded-[24px] font-bold text-xs flex items-center gap-3 shadow-xl transition-all ${
-                isPastMoveOut ? "bg-emerald-500 text-white hover:bg-emerald-600" : "bg-gray-100 text-gray-400 cursor-not-allowed border"
-              }`}
-            >
-              <DollarSign size={18} /> 
-              {isPastMoveOut ? "Finalize Settlement" : `Unlocks on ${new Date(data.exit.moveOutDate).toLocaleDateString()}`}
-            </button>
-          ) : (
-            /* FALLBACK: Show current stage */
-            <div className="px-6 py-4 bg-gray-50 text-gray-400 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-gray-100">
-              Stage: {data?.exit?.status.replace(/_/g, " ")}
-            </div>
-          )}
+          {/* ASSIGN PROFESSIONAL BUTTON */}
+          <button 
+            disabled={status !== "photos_submitted" || isProcessing}
+            onClick={() => setShowPhysicalForm(true)} 
+            className={`px-8 py-5 rounded-[24px] font-bold text-xs flex items-center gap-2 border transition-all ${
+              status === "photos_submitted" ? "bg-orange-50 text-orange-600 border-orange-100 hover:bg-orange-100" : "bg-gray-50 text-gray-400 border-gray-100 opacity-50"
+            }`}
+          >
+            <HardHat size={16}/> {status === 'physical_inspection_required' ? "Inspector Assigned" : "Assign Professional"}
+          </button>
+
+          {/* APPROVE CONDITION BUTTON */}
+          <button 
+            disabled={(status !== "photos_submitted" && status !== "physical_inspection_done") || isProcessing}
+            onClick={() => handleDecision("inspection_completed")} 
+            className={`px-8 py-5 rounded-[24px] font-bold text-xs flex items-center gap-2 shadow-xl transition-all ${
+              (status === "photos_submitted" || status === "physical_inspection_done") ? "bg-[#1F2937] text-white hover:bg-black" : "bg-gray-100 text-gray-300 opacity-50"
+            }`}
+          >
+            {isProcessing ? <Loader2 className="animate-spin" size={16}/> : <CheckCircle size={16}/>}
+            Approve Final Condition
+          </button>
         </div>
       </header>
 
-      {/* --- RECONCILIATION GRID --- */}
-      <div className="space-y-24">
-        {data?.comparisonGrid?.map((item: any, idx: number) => (
-          <motion.div key={idx} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="group">
-            <div className="flex items-center gap-6 mb-10">
-                <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center font-black text-gray-300 text-sm border border-gray-100">0{idx + 1}</div>
-                <h3 className="text-sm font-black text-[#1F2937] uppercase tracking-[0.2em]">{item.area} Comparison</h3>
-                <div className="h-[1px] flex-1 bg-gray-100" />
-                <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 rounded-full border border-emerald-100">
-                    <CheckCircle size={12} className="text-emerald-500" />
-                    <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">Matched Slot</span>
-                </div>
-            </div>
+      {/* 🚧 STATUS BANNERS */}
+      {status === "physical_inspection_required" && (
+        <div className="bg-orange-50 border border-orange-200 p-8 rounded-[40px] flex items-center justify-between">
+           <div className="flex items-center gap-6">
+              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-orange-500 shadow-sm"><Clock size={24}/></div>
+              <div>
+                <p className="text-sm font-black text-orange-900 uppercase">Waiting for Physical Audit</p>
+                <p className="text-xs text-orange-700">Inspector <b>{data.exit.inspectorName}</b> is scheduled for <b>{new Date(data.exit.inspectionDate).toLocaleDateString()}</b>.</p>
+              </div>
+           </div>
+           <div className="text-right">
+              <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest">Approval Locked</p>
+              <p className="text-[9px] text-orange-600 italic">Unlocks after tenant confirms visit.</p>
+           </div>
+        </div>
+      )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-              <div className="space-y-6">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-4">Original Move-In State</p>
-                <div className="relative rounded-[56px] overflow-hidden border border-gray-100 shadow-sm bg-gray-50 aspect-video">
-                  {item.baselineUrl ? (
-                    <img src={item.baselineUrl} className="grayscale opacity-60 h-full w-full object-cover transition-all group-hover:grayscale-0 group-hover:opacity-100" alt="Baseline" />
-                  ) : (
-                    <div className="h-full w-full flex flex-col items-center justify-center text-gray-300"><ImageOff size={48} /><p className="mt-2 text-[9px] uppercase">Missing</p></div>
-                  )}
-                </div>
+      {status === "physical_inspection_done" && (
+        <div className="bg-emerald-50 border border-emerald-200 p-8 rounded-[40px] flex items-center gap-6 animate-in fade-in zoom-in duration-500">
+           <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-emerald-500 shadow-sm"><CheckCircle size={24}/></div>
+           <div>
+              <p className="text-sm font-black text-emerald-900 uppercase">In-Person Audit Completed</p>
+              <p className="text-xs text-emerald-700">The physical inspection has been verified. You can now approve the final condition.</p>
+           </div>
+        </div>
+      )}
+
+      {/* COMPARISON GRID */}
+      <div className="grid grid-cols-1 gap-12">
+        {data.comparisonGrid.map((item: any, idx: number) => (
+          <div key={idx} className="bg-white p-10 rounded-[56px] border border-gray-100 relative overflow-hidden group">
+            {item.hasMaintenance && (
+              <div className="absolute top-0 right-0 bg-blue-600 text-white px-8 py-3 rounded-bl-[32px] flex items-center gap-2 z-10"><Wrench size={14} /><span className="text-[10px] font-black uppercase">Maintenance History</span></div>
+            )}
+            <h3 className="text-lg font-black text-[#1F2937] uppercase mb-8">{item.area}</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+              <div className="space-y-4">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Original Baseline</p>
+                <div className="aspect-video rounded-[40px] bg-gray-50 border flex items-center justify-center overflow-hidden">{item.baselineUrl ? <img src={item.baselineUrl} className="w-full h-full object-cover grayscale opacity-60"/> : <ImageOff size={40} className="text-gray-200"/>}</div>
               </div>
-              
-              <div className="space-y-6">
-                <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest px-4">Current Exit Proof</p>
-                <div className="relative rounded-[56px] overflow-hidden border-4 border-white shadow-2xl bg-gray-900 aspect-video">
-                  {item.proofUrl ? (
-                    <img src={item.proofUrl} className="h-full w-full object-cover" alt="Proof" />
-                  ) : (
-                    <div className="h-full w-full flex flex-col items-center justify-center text-blue-300"><Loader2 size={48} className="animate-spin" /><p className="mt-2 text-[9px] uppercase">Awaiting Capture</p></div>
-                  )}
-                </div>
+              <div className="space-y-4">
+                <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Exit Proof</p>
+                <div className="aspect-video rounded-[40px] bg-gray-900 overflow-hidden shadow-2xl border-4 border-white">{item.proofUrl ? <img src={item.proofUrl} className="w-full h-full object-cover"/> : <div className="h-full w-full flex items-center justify-center"><Loader2 className="animate-spin text-white" size={32}/></div>}</div>
               </div>
             </div>
-          </motion.div>
+            {item.hasMaintenance && (
+              <button onClick={() => router.push("/dashboard-owner/maintenance")} className="mt-8 mx-auto flex items-center gap-2 text-[10px] font-black uppercase text-blue-600 bg-blue-50 px-6 py-3 rounded-2xl hover:bg-blue-100 transition-colors">
+                <History size={14}/> View Item Maintenance history <ExternalLink size={12}/>
+              </button>
+            )}
+          </div>
         ))}
       </div>
 
+      {/* ASSIGN MODAL */}
       <AnimatePresence>
         {showPhysicalForm && (
-          <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-6">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-[48px] p-12 max-w-lg w-full shadow-2xl relative">
-              <button onClick={() => setShowPhysicalForm(false)} className="absolute top-8 right-8 text-gray-400 hover:text-black"><X size={24} /></button>
-              <h2 className="text-3xl font-black mb-10 tracking-tight">Physical Audit</h2>
-              <div className="space-y-6">
-                <input type="datetime-local" className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold" onChange={(e) => setForm({...form, inspectionDate: e.target.value})} />
-                <input placeholder="Inspector Name" className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold" onChange={(e) => setForm({...form, inspectorName: e.target.value})} />
-                <input placeholder="Contact Number" className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold" onChange={(e) => setForm({...form, inspectorContact: e.target.value})} />
-                <button onClick={() => handleDecision("physical_inspection_required")} className="w-full py-6 bg-orange-500 text-white rounded-[32px] font-black text-xs uppercase">Issue Notice</button>
+          <div className="fixed inset-0 z-[100] bg-[#1F2937]/80 backdrop-blur-xl flex items-center justify-center p-6">
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-[56px] p-12 max-w-lg w-full shadow-2xl relative">
+              <button onClick={() => setShowPhysicalForm(false)} className="absolute top-10 right-10 text-gray-300 hover:text-black transition-colors"><X size={24} /></button>
+              <h2 className="text-3xl font-black mb-8 tracking-tight italic">Schedule Inspector</h2>
+              <div className="space-y-4">
+                <input type="date" min={today} max={maxDate} className="w-full p-5 bg-gray-50 rounded-2xl font-bold" onChange={(e) => setForm({...form, inspectionDate: e.target.value})} />
+                <input placeholder="Contractor Name" className="w-full p-5 bg-gray-50 rounded-2xl font-bold" onChange={(e) => setForm({...form, inspectorName: e.target.value})} />
+                <input placeholder="Contact Number" className="w-full p-5 bg-gray-50 rounded-2xl font-bold" onChange={(e) => setForm({...form, inspectorContact: e.target.value})} />
+                <button onClick={() => handleDecision("physical_inspection_required")} className="w-full py-6 bg-orange-500 text-white rounded-[32px] font-black uppercase text-xs tracking-widest shadow-xl shadow-orange-100 mt-6">Confirm Assignment</button>
               </div>
             </motion.div>
           </div>

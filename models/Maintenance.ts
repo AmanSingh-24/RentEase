@@ -43,6 +43,7 @@ const MaintenanceSchema = new mongoose.Schema({
   
   contractorInfo: { name: String, contact: String, arrival: String },
   ownerFeedback: String,
+  isCredited: { type: Boolean, default: false }, // Marks if this repair has been applied to a rent invoice
   createdAt: { type: Date, default: Date.now }
 });
 

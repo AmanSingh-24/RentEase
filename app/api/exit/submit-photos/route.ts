@@ -2,22 +2,42 @@ import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import ExitProcess from "@/models/ExitProcess";
 
+// ✅ INCREASE BODY LIMIT FOR 28 PHOTOS
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb',
+    },
+  },
+};
+
 export async function POST(request: Request) {
   try {
     await connectToDatabase();
-    const { exitId, photos } = await request.json(); // photos: [{ area: "Kitchen", url: "..." }]
+    const body = await request.json();
+    const { exitId, photos } = body;
+
+    // Deep Validation
+    if (!exitId) return NextResponse.json({ error: "Missing Exit ID" }, { status: 400 });
+    if (!photos || !Array.isArray(photos)) return NextResponse.json({ error: "Invalid photo array" }, { status: 400 });
+
+    const formattedPhotos = photos.map((p: any) => ({
+      area: p.area,
+      url: p.url,
+      comment: ""
+    }));
 
     const updatedExit = await ExitProcess.findByIdAndUpdate(
       exitId,
-      { 
-        moveOutPhotos: photos,
-        status: "photos_submitted" 
-      },
-      { new: true }
+      { $set: { moveOutPhotos: formattedPhotos, status: "photos_submitted" } },
+      { returnDocument: 'after' }
     );
 
-    return NextResponse.json({ message: "Photos submitted for review", updatedExit });
+    if (!updatedExit) return NextResponse.json({ error: "Exit record not found in DB" }, { status: 404 });
+
+    return NextResponse.json({ message: "Success", count: updatedExit.moveOutPhotos.length });
   } catch (error: any) {
+    console.error("API_ERROR:", error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

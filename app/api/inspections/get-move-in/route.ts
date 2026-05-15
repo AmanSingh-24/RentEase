@@ -11,28 +11,37 @@ export async function GET(request: Request) {
 
     if (!propertyId) return NextResponse.json({ error: "Property ID required" }, { status: 400 });
 
-    console.log("🔍 API search for Property:", propertyId);
+    console.log("🔍 Vault Search for Property:", propertyId);
 
-    // Resilient Query: Search by ObjectId OR String just in case of DB casting issues
+    // 1. Fetch the inspection using the correct 'type'
     const inspection = await Inspection.findOne({ 
-      $or: [
-        { propertyId: propertyId },
-        { propertyId: new mongoose.Types.ObjectId(propertyId) }
-      ],
+      propertyId: new mongoose.Types.ObjectId(propertyId),
       type: "move-in" 
     }).sort({ createdAt: -1 });
 
     if (!inspection) {
-      console.log("❌ DB: No move-in found for propertyId:", propertyId);
+      console.log("❌ No move-in record found in DB.");
       return NextResponse.json({ error: "No baseline found" }, { status: 404 });
     }
 
-    console.log("✅ DB: Found baseline with", inspection.images.length, "slots.");
+    // ✅ FIX: Use 'report' instead of 'images' and handle the mapping
+    // We map roomName + itemName into a single 'category' string for the UI
+    const formattedSlots = (inspection.report || []).map((item: any) => ({
+      category: `${item.roomName}: ${item.itemName}`,
+      url: item.photoUrl, // This pulls the Base64/Cloudinary link
+      condition: item.condition
+    }));
 
-    // Return the images array as 'slots'
-    return NextResponse.json({ slots: inspection.images || [] });
+    console.log(`✅ Found ${formattedSlots.length} items in move-in report.`);
+
+    // Return the data as 'report' so the frontend can handle it specifically
+    return NextResponse.json({ 
+      report: inspection.report, // Raw data
+      slots: formattedSlots      // Formatted for the Gallery UI
+    });
+
   } catch (error: any) {
-    console.error("🔥 API ERROR:", error.message);
+    console.error("🔥 VAULT FETCH ERROR:", error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

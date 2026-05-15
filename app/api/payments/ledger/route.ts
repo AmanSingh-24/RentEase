@@ -12,63 +12,75 @@ export async function GET(request: Request) {
     const userId = searchParams.get("userId");
 
     const user = await User.findById(userId);
+    // Populate ownerId and maintenanceRules to get the threshold/grace period
     const property = await Property.findById(user.propertyId).populate("ownerId");
 
-    const startDate = new Date(property.leaseStartDate);
-    const currentDate = new Date();
+    const leaseDate = new Date(property.leaseStartDate);
+    const currentDate = new Date(); // May 15, 2026
     const ledger = [];
 
-    let tempDate = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+    // Loop from Lease Start Month to Current Month
+    let tempDate = new Date(leaseDate.getFullYear(), leaseDate.getMonth(), 1);
 
     while (tempDate <= currentDate) {
       const monthName = tempDate.toLocaleString('default', { month: 'long' });
       const year = tempDate.getFullYear();
 
+      // Check if a REAL payment exists in the DB for this month
       const paymentRecord = await Payment.findOne({
         propertyId: property._id,
         tenantId: userId,
         month: monthName,
-        year: year
+        year: year,
+        type: "rent"
       });
 
-      let status = paymentRecord ? "Paid" : "Pending";
-      let finalAmount = property.rentAmount;
-      let breakdown = { base: property.rentAmount, credit: 0, penalty: 0 };
+      if (paymentRecord) {
+        ledger.push({
+          month: monthName,
+          year: year,
+          status: "Paid",
+          amount: paymentRecord.totalAmountPaid,
+          date: paymentRecord.createdAt,
+          transactionId: paymentRecord.gatewayTransactionId
+        });
+      } else {
+        // 🚀 GENERATE DYNAMIC VIRTUAL INVOICE FOR PENDING MONTHS
+        
+        // 1. Calculate Penalty (It's May 15th, so > 10 days since 1st)
+        let penalty = 0;
+        if (property.latePenaltyEnabled !== false) { // Assuming it's enabled by default
+          const day = currentDate.getDate();
+          if (day > 10) penalty = Math.round(property.rentAmount * 0.10);
+          else if (day > 5) penalty = Math.round(property.rentAmount * 0.05);
+        }
 
-      if (status === "Pending") {
-        // 1. SCALING MAINTENANCE CREDITS
+        // 2. Fetch Approved Maintenance Credits
         const approvedRepairs = await Maintenance.find({
           tenantId: userId,
           responsibility: "owner",
           isAmountApproved: true,
-          isCredited: { $ne: true } // Only fetch if not already used in a previous month
+          isCredited: { $ne: true } // Pick repairs not yet "used up"
         });
 
-        const totalCredit = approvedRepairs.reduce((sum, item) => sum + item.finalInvoice.amount, 0);
-        breakdown.credit = totalCredit;
+        const totalCredit = approvedRepairs.reduce((sum, item) => sum + (item.finalInvoice?.amount || 0), 0);
 
-        // 2. DYNAMIC PENALTY LOGIC (Owner controlled)
-        if (property.latePenaltyEnabled) {
-          const dayOfMonth = currentDate.getDate();
-          if (dayOfMonth > 10) {
-            breakdown.penalty = Math.round(property.rentAmount * 0.10); // 10%
-          } else if (dayOfMonth > 5) {
-            breakdown.penalty = Math.round(property.rentAmount * 0.05); // 5%
+        // 3. Final Calculation
+        const finalPayable = (property.rentAmount + penalty) - totalCredit;
+
+        ledger.push({
+          month: monthName,
+          year: year,
+          status: "Pending",
+          amount: finalPayable,
+          // ✅ THIS BREAKDOWN OBJECT IS WHAT THE FRONTEND NEEDS
+          breakdown: {
+            base: property.rentAmount,
+            penalty: penalty,
+            credit: totalCredit
           }
-        }
-        finalAmount = (breakdown.base + breakdown.penalty) - breakdown.credit;
-      } else {
-        finalAmount = paymentRecord.totalAmountPaid;
+        });
       }
-
-      ledger.push({
-        month: monthName,
-        year: year,
-        status,
-        amount: finalAmount,
-        breakdown: paymentRecord ? null : breakdown, // Show breakdown only for pending
-        date: paymentRecord?.createdAt || null
-      });
 
       tempDate.setMonth(tempDate.getMonth() + 1);
     }

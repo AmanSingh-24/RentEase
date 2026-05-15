@@ -7,49 +7,39 @@ import User from "@/models/User";
 export async function PUT(request: Request) {
   try {
     await connectToDatabase();
-    const { exitId, status, isTenantSatisfied, moveOutDate} = await request.json();
+    const { exitId, status, isTenantSatisfied, tenantDisputeComment, moveOutDate } = await request.json();
 
-// 1. Update the Exit Record
-    const updateData: any = { status, isTenantSatisfied };
-    
-    // ✅ FIX: If a new date is provided (via reschedule or acceptance), update it in DB
-    if (moveOutDate) {
-      updateData.moveOutDate = new Date(moveOutDate);
-    }
+    const updateData: any = { status };
+    if (isTenantSatisfied !== undefined) updateData.isTenantSatisfied = isTenantSatisfied;
+    if (tenantDisputeComment) updateData.tenantDisputeComment = tenantDisputeComment;
+    if (moveOutDate) updateData.moveOutDate = new Date(moveOutDate);
 
-    const updatedExit = await ExitProcess.findByIdAndUpdate(
-      exitId,
-      updateData,
-      { new: true }
-    ).populate("tenantId");
+    const updatedExit = await ExitProcess.findByIdAndUpdate(exitId, updateData, { new: true });
 
-    if (!updatedExit) return NextResponse.json({ error: "Exit record not found" }, { status: 404 });
-
-    // 2. DISCHARGE LOGIC: Sever the database links
+    // 💣 THE ATOMIC CLEANUP: Unlink everything when archived
     if (status === "archived") {
-      // ✅ A. Reset Property: Push to history, wipe tenantId, set Vacant
+      // 1. Property: Make Vacant, wipe tenant links, move to history
       await Property.findByIdAndUpdate(updatedExit.propertyId, {
+        status: "vacant",
+        tenantId: null,
+        activeExitId: null,
         $push: { 
           pastTenants: { 
-            tenantId: updatedExit.tenantId._id,
-            name: updatedExit.tenantId.name,
-            email: updatedExit.tenantId.email,
-            movedOutAt: new Date()
+            tenantId: updatedExit.tenantId, 
+            movedOutAt: new Date(),
+            exitRecordId: updatedExit._id 
           } 
-        },
-        tenantId: null,      // ❌ OFFICIALLY UNLINKED
-        status: "vacant",    // ✅ READY FOR NEW TENANT
-        activeExitId: null   // ✅ CLEAR NEGOTIATION
+        }
       });
 
-      // ✅ B. Reset User: Wipe propertyId to trigger "Invite Code" redirect next login
-      await User.findByIdAndUpdate(updatedExit.tenantId._id, { 
+      // 2. User: wipe propertyId so they can join a new house
+      await User.findByIdAndUpdate(updatedExit.tenantId, {
         propertyId: null,
-        isOnboarded: false   // Reset onboarding for their next house
+        isOnboarded: false
       });
     }
 
-    return NextResponse.json({ message: "Lease archived and IDs unlinked", updatedExit });
+    return NextResponse.json({ message: "Process Updated", updatedExit });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
