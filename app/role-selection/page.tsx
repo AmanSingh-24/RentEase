@@ -8,19 +8,20 @@ export default function RoleSelection() {
   const router = useRouter();
 
   const handleRoleSelect = async (selectedRole: "owner" | "tenant") => {
-    // Get the email from local storage or your auth state
-    const userEmail = localStorage.getItem("userEmail"); 
-
     try {
+      // ✅ FIX: No more localStorage email lookups. We only send the role string.
       const res = await fetch("/api/auth/update-role", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: userEmail, role: selectedRole }),
+        body: JSON.stringify({ role: selectedRole }),
       });
 
       if (res.ok) {
-        // Redirect to the appropriate dashboard
+        // Redirect directly to the matching secure dashboard matrix path
         router.push(selectedRole === "owner" ? "/dashboard-owner" : "/dashboard-tenant");
+      } else {
+        const errorData = await res.json();
+        alert(errorData.error || "Failed to update security role profile.");
       }
     } catch (err) {
       alert("Failed to set role. Please try again.");

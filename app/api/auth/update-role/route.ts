@@ -1,6 +1,8 @@
+// app/api/auth/update-role/route.ts
 import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import User from "@/models/User";
+import { getSessionUser } from "@/lib/auth-helper"; // ✅ Secure session helper import
 
 const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret_key_at_least_32_characters_long";
 
@@ -21,16 +23,27 @@ async function generateToken(payload: any) {
 export async function POST(request: Request) {
   try {
     await connectToDatabase();
-    const { email, role } = await request.json();
 
-    const user = await User.findOneAndUpdate(
-      { email },
+    // 🔒 Secure Fix: Read identity claims from the session cookie instead of trusting client body payloads
+    const session = await getSessionUser();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized session access" }, { status: 401 });
+    }
+
+    const { role } = await request.json();
+    if (!role || (role !== "owner" && role !== "tenant")) {
+      return NextResponse.json({ error: "Invalid identity role selection format" }, { status: 400 });
+    }
+
+    // Update using verified session ID and clean up deprecation warning flags
+    const user = await User.findByIdAndUpdate(
+      session.id,
       { role },
-      { new: true }
+      { returnDocument: "after" } // ✅ Fixes the Mongoose findOneAndUpdate deprecation warning log
     );
 
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return NextResponse.json({ error: "User profile context missing from database" }, { status: 404 });
     }
 
     // 🔄 Re-sign token cookie to match upgraded access layer parameters
@@ -47,7 +60,8 @@ export async function POST(request: Request) {
     });
 
     return response;
-  } catch (error) {
+  } catch (error: any) {
+    console.error("🔥 ROLE_UPDATE_API_CRASH:", error);
     return NextResponse.json({ error: "Failed to update role" }, { status: 500 });
   }
 }
