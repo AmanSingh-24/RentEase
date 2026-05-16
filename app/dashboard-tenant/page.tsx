@@ -18,26 +18,25 @@ export default function TenantDashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const userId = localStorage.getItem("userId");
-        const email = localStorage.getItem("userEmail");
-
-        const userRes = await fetch(`/api/auth/get-user?email=${email}`);
-        const userData = await userRes.json();
-        setUser(userData.user);
+        // Fetch current authenticated user from session
+        const meRes = await fetch(`/api/auth/me`);
+        if (!meRes.ok) throw new Error("Failed to fetch user session");
+        const meData = await meRes.json();
+        setUser(meData.user);
 
         // Fetch active property if exists
-        if (userData.user.propertyId) {
-          const propRes = await fetch(`/api/properties/tenant-view?tenantId=${userData.user._id}`);
+        if (meData.user.propertyId) {
+          const propRes = await fetch(`/api/properties/tenant-view`);
           const propData = await propRes.json();
           setProperty(propData.property);
 
-          const insRes = await fetch(`/api/inspections/get?tenantId=${userId}&type=move-in`);
+          const insRes = await fetch(`/api/inspections/get?type=move-in`);
           const insData = await insRes.json();
           if (insRes.ok) setInspection(insData.inspection);
         }
 
         // Fetch history regardless of active property status
-        const historyRes = await fetch(`/api/exit/get-history?tenantId=${userId}`);
+        const historyRes = await fetch(`/api/exit/get-history`);
         const historyData = await historyRes.json();
         if (historyRes.ok) setHistory(historyData.history);
 

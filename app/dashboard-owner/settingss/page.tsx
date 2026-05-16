@@ -15,8 +15,7 @@ export default function OwnerSettings() {
   useEffect(() => {
     const fetchGlobalActivity = async () => {
       try {
-        const ownerId = localStorage.getItem("userId");
-        const res = await fetch(`/api/activity/get?userId=${ownerId}`);
+        const res = await fetch(`/api/activity/get`);
         const data = await res.json();
         if (res.ok) setActivities(data.activities);
       } catch (err) {

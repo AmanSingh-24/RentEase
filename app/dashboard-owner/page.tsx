@@ -29,8 +29,7 @@ export default function OwnerDashboard() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const userId = localStorage.getItem("userId");
-        const res = await fetch(`/api/properties/get?ownerId=${userId}`);
+        const res = await fetch(`/api/properties/get`);
         const data = await res.json();
         
         if (res.ok) {

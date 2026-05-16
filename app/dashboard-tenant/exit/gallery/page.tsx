@@ -23,10 +23,8 @@ export default function MoveOutGallery() {
   useEffect(() => {
 const initialize = async () => {
   try {
-    const tenantId = localStorage.getItem("userId");
-    
     // 1. Get the Active Exit Process directly (Source of Truth)
-    const exitRes = await fetch(`/api/exit/get-status?tenantId=${tenantId}`);
+    const exitRes = await fetch(`/api/exit/get-status`);
     const exitData = await exitRes.json();
     
     if (!exitRes.ok || !exitData.exit) {
@@ -37,9 +35,8 @@ const initialize = async () => {
     // ✅ SUCCESS: We have the Exit ID directly from the record
     setExitId(exitData.exit._id);
 
-    // 2. Now get the property details using the ID inside the exit record
-    const propId = exitData.exit.propertyId;
-    const propRes = await fetch(`/api/properties/get-by-tenant?tenantId=${tenantId}`);
+    // 2. Now get the property details
+    const propRes = await fetch(`/api/properties/get-by-tenant`);
     const propData = await propRes.json();
     
     if (propRes.ok && propData.property) {

@@ -25,8 +25,7 @@ export default function OwnerExitInbox() {
 
   const fetchRequests = async () => {
     try {
-      const ownerId = localStorage.getItem("userId");
-      const res = await fetch(`/api/exit/get-owner-requests?ownerId=${ownerId}`);
+      const res = await fetch(`/api/exit/get-owner-requests`);
       const data = await res.json();
       if (res.ok) setRequests(data.requests);
     } catch (err) { 

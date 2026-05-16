@@ -3,17 +3,18 @@ import connectToDatabase from "@/lib/mongodb";
 import Property from "@/models/Property";
 import Payment from "@/models/Payment";
 import User from "@/models/User";
+import { getSessionUser } from "@/lib/auth-helper";
 
 export async function GET(request: Request) {
   try {
     await connectToDatabase();
-    const { searchParams } = new URL(request.url);
-    const ownerId = searchParams.get("ownerId");
-
-    if (!ownerId) return NextResponse.json({ error: "Owner ID required" }, { status: 400 });
+    const session = await getSessionUser();
+    
+    if (!session) return NextResponse.json({ error: "Unauthorized session access" }, { status: 401 });
+    if (session.role !== "owner") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     // 1. Find all properties belonging to this owner
-    const properties = await Property.find({ ownerId });
+    const properties = await Property.find({ ownerId: session.id });
 
     const tenantStatusReport = await Promise.all(properties.map(async (prop) => {
       // Find the tenant linked to this property

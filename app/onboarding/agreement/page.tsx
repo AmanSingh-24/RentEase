@@ -12,13 +12,22 @@ export default function OnboardingAgreement() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const email = localStorage.getItem("userEmail");
-      const userRes = await fetch(`/api/auth/get-user?email=${email}`);
-      const userData = await userRes.json();
-      const propRes = await fetch(`/api/properties/tenant-view?tenantId=${userData.user._id}`);
-      const propData = await propRes.json();
-      setData({ user: userData.user, property: propData.property });
-      setLoading(false);
+      try {
+        // Fetch authenticated user from session
+        const meRes = await fetch(`/api/auth/me`);
+        if (!meRes.ok) throw new Error("Not authenticated");
+        const userData = await meRes.json();
+        
+        // Fetch tenant's property
+        const propRes = await fetch(`/api/properties/tenant-view`);
+        const propData = await propRes.json();
+        
+        setData({ user: userData.user, property: propData.property });
+      } catch (err) {
+        console.error("Failed to fetch onboarding data", err);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchData();
   }, []);

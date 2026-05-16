@@ -33,8 +33,7 @@ export default function OwnerFinancials() {
 
   const fetchPayments = async () => {
     try {
-      const ownerId = localStorage.getItem("userId");
-      const res = await fetch(`/api/payments/get-for-owner?ownerId=${ownerId}`);
+      const res = await fetch(`/api/payments/get-for-owner`);
       const data = await res.json();
       if (res.ok) {
         // Filter out any virtual records that occur BEFORE the lease start date

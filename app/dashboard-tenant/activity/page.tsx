@@ -24,8 +24,7 @@ export default function ActivityPage() {
   useEffect(() => {
     const fetchActivity = async () => {
       try {
-        const userId = localStorage.getItem("userId");
-        const res = await fetch(`/api/activity/get?userId=${userId}`);
+        const res = await fetch(`/api/activity/get`);
         const data = await res.json();
         if (res.ok) {
           // ✅ FIX: Catch both 'urgent' category and 'nudge' type for the red box

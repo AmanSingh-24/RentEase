@@ -3,16 +3,25 @@ import connectToDatabase from "@/lib/mongodb";
 import ExitProcess from "@/models/ExitProcess";
 import Property from "@/models/Property";
 import Inspection from "@/models/Inspection";
-import Maintenance from "@/models/Maintenance"; // ✅ Added to check history
+import Maintenance from "@/models/Maintenance";
+import { getSessionUser } from "@/lib/auth-helper";
 
 export async function GET(request: Request) {
   try {
     await connectToDatabase();
+    const session = await getSessionUser();
     const { searchParams } = new URL(request.url);
     const exitId = searchParams.get("exitId");
+    
+    if (!session) return NextResponse.json({ error: "Unauthorized session access" }, { status: 401 });
 
     const exit = await ExitProcess.findById(exitId).populate("propertyId tenantId");
     if (!exit) return NextResponse.json({ error: "Exit not found" }, { status: 404 });
+    
+    // Verify ownership: user must be either the tenant or the owner
+    if (exit.tenantId._id.toString() !== session.id && exit.ownerId.toString() !== session.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const propertyObj = exit.propertyId;
     

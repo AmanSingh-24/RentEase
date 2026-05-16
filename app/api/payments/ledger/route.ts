@@ -4,14 +4,17 @@ import Payment from "@/models/Payment";
 import Property from "@/models/Property";
 import Maintenance from "@/models/Maintenance";
 import User from "@/models/User";
+import { getSessionUser } from "@/lib/auth-helper";
 
 export async function GET(request: Request) {
   try {
     await connectToDatabase();
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
+    const session = await getSessionUser();
+    
+    if (!session) return NextResponse.json({ error: "Unauthorized session access" }, { status: 401 });
+    if (session.role !== "tenant") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const user = await User.findById(userId);
+    const user = await User.findById(session.id);
     // Populate ownerId and maintenanceRules to get the threshold/grace period
     const property = await Property.findById(user.propertyId).populate("ownerId");
 

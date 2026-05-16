@@ -25,11 +25,6 @@ export default function LoginPage() {
       const data = await res.json();
       
       if (res.ok) {
-        localStorage.setItem("userEmail", data.user.email);
-        localStorage.setItem("userId", data.user.id);
-
-        // ✅ SIMPLIFIED REDIRECTION LOGIC
-        // The Tenant Dashboard now handles "Case A" (New/Archived) and "Case B" (Active)
         if (data.user.role === "pending") {
           router.push("/role-selection");
         } else if (data.user.role === "owner") {
@@ -63,10 +58,6 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (res.ok && data.user) {
-        localStorage.setItem("userEmail", data.user.email);
-        localStorage.setItem("userId", data.user.id);
-
-        // ✅ SIMPLIFIED REDIRECTION LOGIC
         if (data.user.role === "pending") {
           router.push("/role-selection");
         } else if (data.user.role === "owner") {

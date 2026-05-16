@@ -1,21 +1,19 @@
 import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import Property from "@/models/Property";
+import { getSessionUser } from "@/lib/auth-helper";
 
 export async function GET(request: Request) {
   try {
     await connectToDatabase();
     
-    // 1. Get tenantId from the URL query string
-    const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get("tenantId");
-
-    if (!tenantId) {
-      return NextResponse.json({ error: "Tenant ID is required" }, { status: 400 });
-    }
+    const session = await getSessionUser();
+    
+    if (!session) return NextResponse.json({ error: "Unauthorized session access" }, { status: 401 });
+    if (session.role !== "tenant") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     // 2. Find the property where this tenant is currently staying
-    const property = await Property.findOne({ tenantId });
+    const property = await Property.findOne({ tenantId: session.id });
 
     if (!property) {
       return NextResponse.json({ property: null, message: "No property linked to this tenant" }, { status: 200 });

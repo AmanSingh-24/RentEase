@@ -11,29 +11,24 @@ export default function OnboardingPayment() {
 useEffect(() => {
     const fetchUser = async () => {
       try {
-        const email = localStorage.getItem("userEmail");
-        const res = await fetch(`/api/auth/get-user?email=${email}`);
-        const userData = await res.json();
-        
-        console.log("1. User Data Received:", userData);
-
-        // ✅ Check for BOTH .id and ._id
-        const userId = userData.user?.id || userData.user?._id;
+        // Fetch authenticated user from session
+        const meRes = await fetch(`/api/auth/me`);
+        if (!meRes.ok) throw new Error("Not authenticated");
+        const meData = await meRes.json();
+        const userId = meData.user?._id;
 
         if (userId) {
-          console.log("2. Fetching property for Tenant ID:", userId);
+          console.log("Fetching property for Tenant ID:", userId);
           
-          const propRes = await fetch(`/api/properties/tenant-view?tenantId=${userId}`);
+          const propRes = await fetch(`/api/properties/tenant-view`);
           const propData = await propRes.json();
-          
-          console.log("3. Property Data Received:", propData);
 
           setData({ 
-            user: userData.user, 
+            user: meData.user, 
             property: propData.property 
           });
         } else {
-          console.error("User ID not found in API response");
+          console.error("User ID not found in session");
         }
       } catch (err) {
         console.error("Onboarding Sync Error:", err);

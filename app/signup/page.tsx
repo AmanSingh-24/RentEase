@@ -49,10 +49,6 @@ export default function SignupPage() {
       const data = await res.json(); 
 
       if (res.ok && data.user) {
-        localStorage.setItem("userEmail", data.user.email);
-        localStorage.setItem("userId", data.user.id);
-
-        // ✅ UPDATED DECISION LOGIC
         if (data.user.role === "pending") {
           router.push("/role-selection");
         } else if (data.user.role === "owner") {

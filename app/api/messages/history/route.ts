@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
-import Inspection from "@/models/Inspection";
+import Message from "@/models/Message";
 import { getSessionUser } from "@/lib/auth-helper";
 
 export async function GET(request: Request) {
@@ -8,16 +8,20 @@ export async function GET(request: Request) {
     await connectToDatabase();
     const session = await getSessionUser();
     const { searchParams } = new URL(request.url);
-    const type = searchParams.get("type") || "move-in";
+    const propertyId = searchParams.get("propertyId");
     
     if (!session) return NextResponse.json({ error: "Unauthorized session access" }, { status: 401 });
-    if (session.role !== "tenant") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    // Find the most recent move-in inspection for this tenant
-    const inspection = await Inspection.findOne({ tenantId: session.id, type }).sort({ createdAt: -1 });
+    if (!propertyId) {
+      return NextResponse.json({ error: "Property ID context required" }, { status: 400 });
+    }
 
-    // We return a 200 even if null, so the frontend stops loading and shows the "Start" UI
-    return NextResponse.json({ inspection }, { status: 200 });
+    // Pull historical records ordered from oldest to newest for UI formatting
+    const chatHistory = await Message.find({ propertyId })
+      .sort({ createdAt: 1 })
+      .lean();
+
+    return NextResponse.json({ history: chatHistory }, { status: 200 });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

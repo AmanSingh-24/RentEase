@@ -20,8 +20,7 @@ export default function OwnerInspections() {
 
   const fetchInspections = async () => {
     try {
-      const ownerId = localStorage.getItem("userId");
-      const res = await fetch(`/api/inspections/get-for-owner?ownerId=${ownerId}`);
+      const res = await fetch(`/api/inspections/get-for-owner`);
       const data = await res.json();
       if (res.ok) setInspections(data.inspections);
     } catch (err) { console.error(err); }

@@ -28,8 +28,7 @@ export default function TenantExitManager() {
 
   const initialize = async () => {
     try {
-      const tenantId = localStorage.getItem("userId");
-      const propRes = await fetch(`/api/properties/get-by-tenant?tenantId=${tenantId}`);
+      const propRes = await fetch(`/api/properties/get-by-tenant`);
       const propData = await propRes.json();
       if (propRes.ok && propData.property) {
         setIds({ propertyId: propData.property._id, ownerId: propData.property.ownerId });
@@ -40,7 +39,7 @@ export default function TenantExitManager() {
 
   const fetchStatus = async () => {
     try {
-      const res = await fetch(`/api/exit/get-status?tenantId=${localStorage.getItem("userId")}`);
+      const res = await fetch(`/api/exit/get-status`);
       const data = await res.json();
       if (res.ok && data.exit) {
         setExitData(data.exit);
@@ -148,7 +147,7 @@ export default function TenantExitManager() {
               await fetch("/api/exit/serve-notice", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ tenantId: localStorage.getItem("userId"), ...ids, moveOutDate: proposedDate, reason })
+                body: JSON.stringify({ ...ids, moveOutDate: proposedDate, reason })
               });
               fetchStatus();
           }} className="w-full py-8 bg-[#1F2937] text-white rounded-[32px] font-black uppercase text-xs">Serve Notice</button>

@@ -13,17 +13,35 @@ declare var Razorpay: any;
 
 export default function TenantLedger() {
   const [data, setData] = useState<any>(null);
+  const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [payingMonth, setPayingMonth] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchLedger();
+    fetchUserAndLedger();
   }, []);
+
+  const fetchUserAndLedger = async () => {
+    try {
+      // Fetch current user session
+      const userRes = await fetch(`/api/auth/me`);
+      const userData = await userRes.json();
+      setUser(userData.user);
+      
+      // Fetch ledger
+      const res = await fetch(`/api/payments/ledger`);
+      const d = await res.json();
+      if (res.ok) setData(d);
+    } catch (err) {
+      console.error("Ledger sync failed:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchLedger = async () => {
     try {
-      const userId = localStorage.getItem("userId");
-      const res = await fetch(`/api/payments/ledger?userId=${userId}`);
+      const res = await fetch(`/api/payments/ledger`);
       const d = await res.json();
       if (res.ok) setData(d);
     } catch (err) {
@@ -42,7 +60,7 @@ export default function TenantLedger() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           amount: item.amount, 
-          receiptId: `rent_${item.month}_${item.year}_${localStorage.getItem("userId")}` 
+          receiptId: `rent_${item.month}_${item.year}` 
         }),
       });
       const orderData = await orderRes.json();
@@ -60,7 +78,6 @@ export default function TenantLedger() {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              userId: localStorage.getItem("userId"),
               month: item.month,
               year: item.year,
               
@@ -86,8 +103,8 @@ export default function TenantLedger() {
           }
         },
         prefill: { 
-            email: localStorage.getItem("userEmail") || "",
-            name: localStorage.getItem("userName") || ""
+            email: user?.email || "",
+            name: user?.name || ""
         },
         theme: { color: "#1F2937" },
       };
@@ -189,7 +206,7 @@ export default function TenantLedger() {
                         <BadgeCheck size={18}/> Audit Cleared
                       </div>
                       <button 
-                        onClick={() => generateReceipt(item, data.property, localStorage.getItem("userName") || "Tenant")}
+                        onClick={() => generateReceipt(item, data.property, user?.name || "Tenant")}
                         className="p-5 bg-gray-50 rounded-[24px] text-gray-400 hover:text-blue-600 transition-all shadow-sm active:scale-90"
                       >
                         <Download size={20} />

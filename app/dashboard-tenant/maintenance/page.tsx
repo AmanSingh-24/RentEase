@@ -51,7 +51,7 @@ export default function MaintenancePage() {
 
   const fetchPropertyStructure = async () => {
     try {
-      const res = await fetch(`/api/properties/tenant-view?tenantId=${localStorage.getItem("userId")}`);
+      const res = await fetch(`/api/properties/tenant-view`);
       const data = await res.json();
       if (res.ok) { setProperty(data.property); setRoomName(data.property.structure[0]?.roomName || ""); }
     } catch (err) { console.error(err); }
@@ -59,7 +59,7 @@ export default function MaintenancePage() {
 
   const fetchMaintenance = async () => {
     try {
-      const res = await fetch(`/api/maintenance/get?tenantId=${localStorage.getItem("userId")}`);
+      const res = await fetch(`/api/maintenance/get`);
       const data = await res.json();
       if (res.ok) setIssues(data.issues);
     } catch (err) { console.error(err); }
@@ -78,7 +78,6 @@ export default function MaintenancePage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          tenantId: localStorage.getItem("userId"),
           roomName,
           itemName,
           description: desc,

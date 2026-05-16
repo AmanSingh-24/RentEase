@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Bell, Camera, Wrench, CreditCard, Settings, LogOut, Loader2, Lock } from "lucide-react";
+import { LayoutDashboard, Bell, Camera, Wrench, CreditCard, Settings, LogOut, Loader2, Lock, MessageSquare } from "lucide-react";
 
 export default function TenantLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -13,33 +13,35 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
 
-  useEffect(() => {
-    const checkTenancy = async () => {
-      try {
-        const email = localStorage.getItem("userEmail");
-        const userId = localStorage.getItem("userId");
+useEffect(() => {
+  const checkTenancy = async () => {
+    try {
+      // ✅ FIX: Read directly from /api/auth/me to fetch identity parameters securely
+      const res = await fetch("/api/auth/me");
+      const data = await res.json();
+      
+      if (res.ok && data.user) {
+        setUser(data.user);
+        setHasProperty(Boolean(data.user.propertyId)); 
 
-        // 1. Get User
-        const res = await fetch(`/api/auth/get-user?email=${email}`);
-        const data = await res.json();
-        if (res.ok) {
-          setUser(data.user);
-          setHasProperty(Boolean(data.user.propertyId)); 
-
-          // 2. Get Inspection Status if property is linked
-          if (data.user.propertyId) {
-            const insRes = await fetch(`/api/inspections/get?tenantId=${userId}&type=move-in`);
-            const insData = await insRes.json();
-            if (insRes.ok && insData.inspection) {
-              setInspectionStatus(insData.inspection.status);
-            }
+        // Get Inspection Status if property is linked
+        if (data.user.propertyId) {
+          // Pass the secure ID returned directly from our server session payload
+          const insRes = await fetch(`/api/inspections/get?tenantId=${data.user._id}&type=move-in`);
+          const insData = await insRes.json();
+          if (insRes.ok && insData.inspection) {
+            setInspectionStatus(insData.inspection.status);
           }
         }
-      } catch (err) { console.error(err); }
-      finally { setLoading(false); }
-    };
-    checkTenancy();
-  }, []);
+      }
+    } catch (err) { 
+      console.error("Layout verification failure:", err); 
+    } finally { 
+      setLoading(false); 
+    }
+  };
+  checkTenancy();
+}, []);
 
   if (loading) return <div className="h-screen flex items-center justify-center bg-[#1F2937]"><Loader2 className="animate-spin text-blue-600" size={40} /></div>;
 
@@ -47,6 +49,7 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
     { name: "Overview", href: "/dashboard-tenant", icon: LayoutDashboard, protected: false },
     { name: "Activity", href: "/dashboard-tenant/activity", icon: Bell, protected: false },
     { name: "Witness", href: "/dashboard-tenant/witness", icon: Camera, protected: false },
+    { name: "Messages", href: "/dashboard-tenant/messages", icon: MessageSquare, protected: true },
     { name: "Maintenance", href: "/dashboard-tenant/maintenance", icon: Wrench, protected: true },
     { name: "Payments", href: "/dashboard-tenant/payments", icon: CreditCard, protected: true },
     { name: "Settings", href: "/dashboard-tenant/settings", icon: Settings, protected: false },
@@ -61,7 +64,6 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
             <div className="mb-12 px-2"><Image src="/desk.png" alt="Logo" width={150} height={40} className="brightness-200" /></div>
             <nav className="space-y-2">
               {navItems.map((item) => {
-                // ✅ LOGIC: If item is protected and inspection is NOT verified, disable it
                 const isLocked = item.protected && inspectionStatus !== "verified";
                 
                 return (

@@ -1,22 +1,21 @@
 import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import Maintenance from "@/models/Maintenance";
+import { getSessionUser } from "@/lib/auth-helper";
 
 export async function GET(request: Request) {
   try {
     await connectToDatabase();
-    const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get("tenantId");
-
-    if (!tenantId) {
-      return NextResponse.json({ error: "Tenant ID is required" }, { status: 400 });
-    }
+    const session = await getSessionUser();
+    
+    if (!session) return NextResponse.json({ error: "Unauthorized session access" }, { status: 401 });
+    if (session.role !== "tenant") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     /** * ✅ UPDATED: Added .populate("propertyId") 
      * This ensures 'propertyId' isn't just an ID string, but contains the full address.
      * We also sort by newest first to keep the 'Active Requests' current.
      */
-    const issues = await Maintenance.find({ tenantId })
+    const issues = await Maintenance.find({ tenantId: session.id })
       .populate("propertyId", "address") 
       .sort({ createdAt: -1 });
 
