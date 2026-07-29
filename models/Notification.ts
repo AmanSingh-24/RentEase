@@ -1,36 +1,36 @@
 import mongoose from "mongoose";
 
 const NotificationSchema = new mongoose.Schema({
-  // The person receiving the alert (e.g., Aman the Tenant)
-  recipientId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: "User", 
-    required: true 
-  },
-  
-  // The person who triggered it (e.g., the Property Owner)
-  senderId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: "User" 
-  },
-  
-  // Categorize for UI icons: 'nudge', 'payment', 'maintenance'
-  type: { 
-    type: String, 
+  recipientId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
     required: true,
-    enum: ["nudge", "payment", "maintenance", "system"],
-    default: "system"
+    index: true,
   },
-  
+  type: {
+    type: String,
+    enum: [
+      "host_approved",
+      "host_rejected",
+      "application_preapproved",
+      "application_approved",
+      "application_rejected",
+      "property_approved",
+      "property_rejected",
+      "general",
+    ],
+    required: true,
+  },
   title: { type: String, required: true },
   message: { type: String, required: true },
-  
-  // Optional: Link to redirect the tenant to the payment page
-  actionLink: { type: String, default: "/dashboard-tenant/payments" },
-  
   isRead: { type: Boolean, default: false },
-  createdAt: { type: Date, default: Date.now }
+  actionUrl: { type: String, default: "" },
+  createdAt: { type: Date, default: Date.now },
 });
 
-// Avoid "OverwriteModelError" in Next.js dev mode
-export default mongoose.models.Notification || mongoose.model("Notification", NotificationSchema);
+if (process.env.NODE_ENV !== "production") {
+  delete mongoose.models.Notification;
+}
+
+export default mongoose.models.Notification ||
+  mongoose.model("Notification", NotificationSchema);

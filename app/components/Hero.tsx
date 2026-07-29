@@ -82,14 +82,14 @@ export default function Hero() {
           </motion.p>
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
             className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <button className="text-white px-8 py-4 rounded-xl font-bold text-lg hover:scale-105 transition-transform w-full sm:w-auto"
+            <a href="/properties" className="text-white px-8 py-4 rounded-xl font-bold text-lg hover:scale-105 transition-transform w-full sm:w-auto text-center"
               style={{ backgroundColor: '#0052CC', boxShadow: '0 20px 60px -15px rgba(0, 82, 204, 0.3)' }}>
-              Get Started Free
-            </button>
-            <button className="font-semibold px-8 py-4 bg-white hover:bg-gray-200 rounded-xl transition-colors w-full sm:w-auto"
+              Explore Properties 🔍
+            </a>
+            <a href="#how-it-works" className="font-semibold px-8 py-4 bg-white hover:bg-gray-200 rounded-xl transition-colors w-full sm:w-auto text-center"
               style={{ color: '#1F2937' }}>
               See How It Works →
-            </button>
+            </a>
           </motion.div>
         </div>
 

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Bell, Camera, Wrench, CreditCard, Settings, LogOut, Loader2, Lock, MessageSquare } from "lucide-react";
+import { LayoutDashboard, Bell, Camera, Wrench, CreditCard, Settings, LogOut, Loader2, Lock, MessageSquare, ClipboardList } from "lucide-react";
 
 export default function TenantLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -47,6 +47,7 @@ useEffect(() => {
 
   const navItems = [
     { name: "Overview", href: "/dashboard-tenant", icon: LayoutDashboard, protected: false },
+    { name: "Applications", href: "/dashboard-tenant/applications", icon: ClipboardList, protected: false },
     { name: "Activity", href: "/dashboard-tenant/activity", icon: Bell, protected: false },
     { name: "Witness", href: "/dashboard-tenant/witness", icon: Camera, protected: false },
     { name: "Messages", href: "/dashboard-tenant/messages", icon: MessageSquare, protected: true },

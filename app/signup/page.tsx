@@ -5,18 +5,25 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { auth, googleProvider } from "@/lib/firebase";
 import { signInWithPopup } from "firebase/auth";
 
 export default function SignupPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect"); // e.g. /onboarding/landlord
+
   const [formData, setFormData] = useState({ name: "", email: "", password: "" });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
+  // Manual signup → account created, but NOT logged in yet.
+  // Send them to /login and carry the redirect param forward.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError("");
     try {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
@@ -24,16 +31,25 @@ export default function SignupPage() {
         body: JSON.stringify(formData),
       });
       const data = await res.json();
-      if (res.ok) router.push("/login");
-      else alert(data.error);
-    } catch (err) {
-      alert("Signup failed. Please try again.");
+      if (res.ok) {
+        // Chain the redirect param to login so the full flow is preserved
+        const loginUrl = redirectTo
+          ? `/login?redirect=${encodeURIComponent(redirectTo)}`
+          : "/login";
+        router.push(loginUrl);
+      } else {
+        setError(data.error || "Signup failed. Please try again.");
+      }
+    } catch {
+      setError("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
+  // Google signup → immediately authenticated, go to redirect or landing page.
   const handleGoogleSignUp = async () => {
+    setError("");
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const res = await fetch("/api/auth/google", {
@@ -46,26 +62,18 @@ export default function SignupPage() {
         }),
       });
 
-      const data = await res.json(); 
+      const data = await res.json();
 
       if (res.ok && data.user) {
-        if (data.user.role === "pending") {
-          router.push("/role-selection");
-        } else if (data.user.role === "owner") {
-          router.push("/dashboard-owner");
-        } else if (data.user.role === "tenant") {
-          if (data.user.isOnboarded === false) {
-            router.push("/onboarding/payment");
-          } else {
-            router.push("/dashboard-tenant");
-          }
-        }
+        // If came from "Rent Your Home" → go straight to listing form
+        // Otherwise → landing page (auto-redirect handles admin/owner routing)
+        router.push(redirectTo || "/");
       } else {
-        alert(data.error || "Google sync failed.");
+        setError(data.error || "Google sign-up failed.");
       }
     } catch (err) {
       console.error(err);
-      alert("Google Sign-In failed.");
+      setError("Google Sign-In failed. Please try again.");
     }
   };
 
@@ -119,6 +127,14 @@ export default function SignupPage() {
             />
           </div>
 
+          {/* Inline error */}
+          {error && (
+            <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-100 rounded-2xl">
+              <span className="text-red-500 text-lg">⚠</span>
+              <p className="text-sm text-red-600 font-medium">{error}</p>
+            </div>
+          )}
+
           <button 
             disabled={loading}
             className="w-full bg-[#0052CC] text-white py-5 rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/20 hover:scale-[1.02] active:scale-95 transition-all mt-4 disabled:opacity-50"
@@ -143,7 +159,13 @@ export default function SignupPage() {
         </div>
 
         <p className="mt-10 text-gray-500">
-          Already a member? <Link href="/login" className="text-[#0052CC] font-bold hover:underline">Sign In</Link>
+          Already a member?{" "}
+          <Link
+            href={redirectTo ? `/login?redirect=${encodeURIComponent(redirectTo)}` : "/login"}
+            className="text-[#0052CC] font-bold hover:underline"
+          >
+            Sign In
+          </Link>
         </p>
       </div>
 

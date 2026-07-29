@@ -53,7 +53,7 @@ export default function OwnerDashboard() {
   const mobileCards = [
     { name: "Portfolio", icon: LayoutGrid, color: "bg-gray-100", iconColor: "#1F2937", desc: `${stats.count} Active`, href: "/dashboard-owner" },
     { name: "Properties", icon: Building2, color: "bg-blue-50", iconColor: "#0052CC", desc: "View All", href: "/dashboard-owner/properties" },
-    { name: "Add New", icon: Plus, color: "bg-green-50", iconColor: "#10B981", desc: "List Asset", onClick: openModal },
+    { name: "Add New", icon: Plus, color: "bg-green-50", iconColor: "#10B981", desc: "List Asset", href: "/onboarding/landlord" },
     { name: "Maintenance", icon: Wrench, color: "bg-orange-50", iconColor: "#F59E0B", desc: "0 Pending", href: "/dashboard-owner/maintenance" },
     { name: "Inspections", icon: ShieldCheck, color: "bg-teal-50", iconColor: "#0D9488", desc: "0 Review", href: "/dashboard-owner/inspections" },
     { name: "Settings", icon: Settings, color: "bg-purple-50", iconColor: "#8B5CF6", desc: "Preferences", href: "/dashboard-owner/settings" },
@@ -105,12 +105,12 @@ export default function OwnerDashboard() {
             <p className="text-gray-400 font-medium italic">High-level insights for your rental assets.</p>
           </div>
           <div className="flex gap-4">
-             <button 
-                onClick={openModal}
+             <Link 
+                href="/onboarding/landlord"
                 className="px-6 py-3 bg-white border border-gray-200 text-[#1F2937] rounded-xl font-bold text-xs hover:bg-gray-50 transition-all flex items-center gap-2"
              >
                 <Plus size={16} /> Add Property
-             </button>
+             </Link>
              <button className="px-6 py-3 bg-[#0052CC] text-white rounded-xl font-bold text-xs shadow-lg shadow-blue-500/20 hover:scale-105 transition-all">
                 Send Rent Reminders
              </button>
@@ -165,7 +165,7 @@ export default function OwnerDashboard() {
                       <div className="w-2 h-10 rounded-full bg-[#0052CC]" />
                       <div>
                         <p className="text-sm font-bold text-[#1F2937]">{prop.address}</p>
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">Code: {prop.inviteCode}</p>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">{prop.city} · {prop.bhk} BHK</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-12">

@@ -4,18 +4,36 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { auth, googleProvider } from "@/lib/firebase";
 import { signInWithPopup } from "firebase/auth";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect");
+
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  // Everyone lands on / after login.
+  // The landing page's useEffect auto-redirects:
+  //   - Admin        → /admin/dashboard
+  //   - Owner with listings → /dashboard-owner
+  //   - Everyone else → stays on landing page
+  // The only exception: if ?redirect= is set (e.g. from "Apply for property" or "Rent Your Home")
+  const getDestination = (user: any): string => {
+    if (redirectTo) return redirectTo;
+    // Admin is the only one we fast-track because they should never see the landing page
+    if (user.role === "admin") return "/admin/dashboard";
+    return "/";
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError("");
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
@@ -23,26 +41,22 @@ export default function LoginPage() {
         body: JSON.stringify(formData),
       });
       const data = await res.json();
-      
+
       if (res.ok) {
-        if (data.user.role === "pending") {
-          router.push("/role-selection");
-        } else if (data.user.role === "owner") {
-          router.push("/dashboard-owner");
-        } else if (data.user.role === "tenant") {
-          router.push("/dashboard-tenant"); 
-        }
+        const dest = getDestination(data.user);
+        router.push(dest);
       } else {
-        alert(data.error);
+        setError(data.error || "Login failed. Please try again.");
       }
     } catch (err) {
-      alert("Login failed.");
+      setError("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleSignIn = async () => {
+    setError("");
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const res = await fetch("/api/auth/google", {
@@ -58,21 +72,17 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (res.ok && data.user) {
-        if (data.user.role === "pending") {
-          router.push("/role-selection");
-        } else if (data.user.role === "owner") {
-          router.push("/dashboard-owner");
-        } else if (data.user.role === "tenant") {
-          router.push("/dashboard-tenant");
-        }
+        const dest = getDestination(data.user);
+        router.push(dest);
       } else {
-        alert(data.error || "Google authentication failed.");
+        setError(data.error || "Google authentication failed.");
       }
     } catch (err) {
       console.error(err);
-      alert("Google Sign-In failed.");
+      setError("Google Sign-In failed. Please try again.");
     }
   };
+
   
   return (
     <div className="min-h-screen bg-white grid lg:grid-cols-2 overflow-hidden relative">
@@ -147,6 +157,14 @@ export default function LoginPage() {
               className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/50 focus:bg-white focus:border-[#0D9488] focus:ring-4 focus:ring-[#0D9488]/5 outline-none transition-all text-[#1F2937]" 
             />
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-100 rounded-2xl">
+              <span className="text-red-500 text-lg">⚠</span>
+              <p className="text-sm text-red-600 font-medium">{error}</p>
+            </div>
+          )}
 
           <button 
             disabled={loading}

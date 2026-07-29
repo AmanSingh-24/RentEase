@@ -13,14 +13,30 @@ if (!cached) {
 }
 
 async function connectToDatabase() {
-  if (cached.conn) return cached.conn;
-
   if (!cached.promise) {
     cached.promise = mongoose.connect(MONGODB_URI!).then((mongoose) => {
       return mongoose;
     });
   }
   cached.conn = await cached.promise;
+  
+  // Safely drop leftover inviteCode_1 index if present in DB
+  try {
+    const db = cached.conn.connection.db;
+    if (db) {
+      const collections = await db.listCollections({ name: "properties" }).toArray();
+      if (collections.length > 0) {
+        const indexes = await db.collection("properties").indexes();
+        if (indexes.some((idx: any) => idx.name === "inviteCode_1")) {
+          await db.collection("properties").dropIndex("inviteCode_1");
+          console.log("🧹 Cleaned up stale 'inviteCode_1' index from properties collection.");
+        }
+      }
+    }
+  } catch (err) {
+    // Ignore if already dropped
+  }
+
   return cached.conn;
 }
 

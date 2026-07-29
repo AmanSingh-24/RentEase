@@ -1,4 +1,5 @@
 "use client";
+// ✅ MARKETPLACE EXPANSION: Applications nav added
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -6,7 +7,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { 
   LayoutGrid, Building2, Wrench, ShieldCheck, IndianRupee, 
-  Settings, LogOut, PlusCircle, X, Plus, MessageSquare, LayoutTemplate
+  Settings, LogOut, PlusCircle, X, Plus, MessageSquare, LayoutTemplate, ClipboardList
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PropertyProvider, useProperty } from "../context/PropertyContext";
@@ -15,6 +16,7 @@ import { PropertyProvider, useProperty } from "../context/PropertyContext";
 const ownerNavItems = [
   { name: "Portfolio", href: "/dashboard-owner", icon: LayoutGrid, color: "#1F2937" },
   { name: "Properties", href: "/dashboard-owner/propertiess", icon: Building2, color: "#0052CC" },
+  { name: "Applications", href: "/dashboard-owner/applications", icon: ClipboardList, color: "#8B5CF6" },
   { name: "Messages", href: "/dashboard-owner/messages", icon: MessageSquare, color: "#3B82F6" },
   { name: "Maintenance", href: "/dashboard-owner/maintenance", icon: Wrench, color: "#F59E0B" },
   { name: "Inspections", href: "/dashboard-owner/inspections", icon: ShieldCheck, color: "#0D9488" },
