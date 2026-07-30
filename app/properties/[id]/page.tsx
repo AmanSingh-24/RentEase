@@ -29,68 +29,38 @@ export default function PropertyDetailPage() {
   const [loading, setLoading] = useState(true);
   const [imageIndex, setImageIndex] = useState(0);
 
-  // Apply modal state
+  // Booking state
   const [showModal, setShowModal] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [existingBooking, setExistingBooking] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
-  const [formData, setFormData] = useState({
-    fullName: "",
-    phone: "",
-    monthlyIncome: "",
-    occupantsCount: "1",
-    targetMoveInDate: "",
-    notes: "",
-  });
+  const [formData, setFormData] = useState({ name: "", phone: "", email: "" });
 
   // Load property details
   useEffect(() => {
     const fetchProperty = async () => {
       try {
-        // Use the marketplace endpoint (public, safe, no sensitive data)
-        const res = await fetch(`/api/properties/marketplace?city=`);
+        const res = await fetch(`/api/properties/marketplace?id=${id}`);
         const data = await res.json();
-        if (res.ok) {
-          const found = data.properties?.find((p: any) => p._id === id);
-          if (found) {
-            setProperty(found);
-          } else {
-            // Fallback: try fetching directly by querying all (handles after filter clear)
-            setProperty(null);
-          }
+        if (res.ok && data.properties?.length > 0) {
+          setProperty(data.properties[0]);
+        } else {
+          setProperty(null);
         }
       } catch (err) {
         console.error("Failed to load property:", err);
+        setProperty(null);
       } finally {
         setLoading(false);
       }
     };
 
-    // Fetch single property detail via a dedicated single endpoint
-    const fetchSingle = async () => {
-      try {
-        const res = await fetch(`/api/properties/get-single?propertyId=${id}`);
-        const data = await res.json();
-        // get-single may require auth — if it fails use marketplace
-        if (res.ok && data.property) {
-          // Strip sensitive data before using
-          const { inviteCode, structure, agreement, tenantId, ...safe } = data.property;
-          setProperty(safe);
-        } else {
-          await fetchProperty();
-        }
-      } catch {
-        await fetchProperty();
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (id) fetchSingle();
+    if (id) fetchProperty();
   }, [id]);
 
-  // Check if user is logged in (for Apply button)
+  // Check if user is logged in and pre-fill email; also check existing booking
   useEffect(() => {
     const checkSession = async () => {
       try {
@@ -98,50 +68,54 @@ export default function PropertyDetailPage() {
         if (res.ok) {
           const data = await res.json();
           setCurrentUser(data.user || null);
+          if (data.user) {
+            setFormData((prev) => ({ ...prev, name: data.user.name || "", email: data.user.email || "" }));
+            // Check if this user already has a booking for this property
+            if (id) {
+              const bRes = await fetch(`/api/bookings/status?propertyId=${id}`);
+              const bData = await bRes.json();
+              if (bRes.ok && bData.booking) setExistingBooking(bData.booking);
+            }
+          }
         }
       } catch {
         setCurrentUser(null);
       }
     };
     checkSession();
-  }, []);
+  }, [id]);
 
-  const handleApplyClick = () => {
+  const handleBookClick = () => {
     if (!currentUser) {
-      // Redirect to login with return URL
-      router.push(`/login?redirect=/properties/${id}`);
+      router.push(`/signup?redirect=/properties/${id}`);
       return;
     }
-    if (currentUser.role !== "tenant") {
-      setError("Only tenant accounts can apply for properties. Please sign in as a tenant.");
+    if (currentUser.role === "owner" || currentUser.role === "admin") {
+      setError("Only tenant accounts can book properties.");
       return;
     }
     setShowModal(true);
   };
 
-  const handleSubmitApplication = async () => {
-    if (!formData.fullName || !formData.phone) {
-      setError("Full name and phone number are required.");
+  const handleSubmitBooking = async () => {
+    if (!formData.name || !formData.phone || !formData.email) {
+      setError("Name, phone and email are all required.");
       return;
     }
     setSubmitting(true);
     setError("");
     try {
-      const res = await fetch("/api/applications/submit", {
+      const res = await fetch("/api/bookings/request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          propertyId: id,
-          ...formData,
-          monthlyIncome: Number(formData.monthlyIncome),
-          occupantsCount: Number(formData.occupantsCount),
-        }),
+        body: JSON.stringify({ propertyId: id, ...formData }),
       });
       const data = await res.json();
       if (res.ok) {
         setSubmitted(true);
+        setExistingBooking({ status: "pending" });
       } else {
-        setError(data.error || "Failed to submit application.");
+        setError(data.error || "Failed to submit booking.");
       }
     } catch {
       setError("Something went wrong. Please try again.");
@@ -149,6 +123,11 @@ export default function PropertyDetailPage() {
       setSubmitting(false);
     }
   };
+
+  // Determine button state based on existing booking
+  const bookingStatus = existingBooking?.status;
+  const isBooked = bookingStatus === "pending" || bookingStatus === "pending_payment";
+  const isRejected = bookingStatus === "rejected";
 
   if (loading) {
     return (
@@ -342,16 +321,31 @@ export default function PropertyDetailPage() {
                 </div>
               )}
 
-              <button
-                onClick={handleApplyClick}
-                className="w-full py-4 bg-[#0052CC] text-white rounded-xl font-black text-sm hover:bg-[#0041a3] transition-colors shadow-lg shadow-blue-200"
-              >
-                {currentUser?.role === "tenant" ? "Apply for Rent" : "Sign In to Apply"}
-              </button>
+              {/* Smart Book / Requested button */}
+              {isBooked ? (
+                <button
+                  disabled
+                  className="w-full py-4 bg-gray-100 text-gray-400 rounded-xl font-black text-sm cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  <CheckCircle size={16} className="text-[#10B981]" /> Requested
+                </button>
+              ) : (
+                <button
+                  onClick={handleBookClick}
+                  className="w-full py-4 bg-[#0052CC] text-white rounded-xl font-black text-sm hover:bg-[#0041a3] transition-colors shadow-lg shadow-blue-200"
+                >
+                  {!currentUser ? "Sign Up to Book" : "Book the Property"}
+                </button>
+              )}
 
-              {!currentUser && (
-                <p className="text-[10px] text-gray-400 text-center mt-3">
-                  You need to be signed in as a tenant to apply.
+              {isBooked && (
+                <p className="text-[10px] text-[#10B981] text-center mt-2 font-bold">
+                  ✓ Your contact details have been sent to the owner. They will reach out soon.
+                </p>
+              )}
+              {isRejected && (
+                <p className="text-[10px] text-gray-400 text-center mt-2">
+                  Your previous request was not selected. You may book again.
                 </p>
               )}
             </div>
@@ -402,15 +396,15 @@ export default function PropertyDetailPage() {
         </div>
       </div>
 
-      {/* ── Rental Application Modal ────────────────────────────────────────── */}
+      {/* ── Book the Property Modal ────────────────────────────────────────── */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl relative max-h-[90vh] overflow-y-auto">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl relative">
             <div className="p-6 md:p-8">
               {/* Modal Header */}
               <div className="flex items-start justify-between mb-6">
                 <div>
-                  <h2 className="text-xl font-black text-[#1F2937]">Apply for Rent</h2>
+                  <h2 className="text-xl font-black text-[#1F2937]">Book the Property</h2>
                   <p className="text-sm text-gray-400 mt-1">{property.address}</p>
                 </div>
                 <button
@@ -422,95 +416,53 @@ export default function PropertyDetailPage() {
               </div>
 
               {submitted ? (
-                /* Success State */
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <CheckCircle size={32} className="text-[#10B981]" />
+                /* Success Modal */
+                <div className="text-center py-6">
+                  <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle size={40} className="text-[#10B981]" />
                   </div>
-                  <h3 className="text-xl font-black text-[#1F2937] mb-2">Application Submitted!</h3>
-                  <p className="text-gray-500 text-sm mb-6">
-                    The landlord will review your application and may request your Govt ID before finalizing the lease.
+                  <h3 className="text-xl font-black text-[#1F2937] mb-3">Request Sent!</h3>
+                  <p className="text-gray-500 text-sm mb-6 leading-relaxed">
+                    Your contact details have been sent to the owner. They will contact you soon through mail, WhatsApp, or phone call.
                   </p>
-                  <div className="bg-blue-50 rounded-xl p-4 text-left mb-6">
-                    <p className="text-xs font-bold text-[#0052CC] uppercase tracking-wide mb-2">What happens next?</p>
-                    <ol className="text-xs text-gray-600 space-y-1 list-decimal list-inside">
-                      <li>Landlord reviews your profile</li>
-                      <li>If pre-approved, you'll be asked to upload Govt ID</li>
-                      <li>Landlord finalizes & you get tenancy dashboard access</li>
-                    </ol>
-                  </div>
-                  <Link href="/dashboard-tenant/applications">
-                    <button className="w-full py-3 bg-[#0052CC] text-white rounded-xl font-bold text-sm">
-                      Track Your Applications →
-                    </button>
-                  </Link>
+                  <button
+                    onClick={() => { setShowModal(false); setSubmitted(false); }}
+                    className="w-full py-3 bg-[#0052CC] text-white rounded-xl font-black text-sm hover:bg-[#0041a3] transition-colors"
+                  >
+                    OK
+                  </button>
                 </div>
               ) : (
-                /* Application Form */
+                /* Booking Form */
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-1">Full Name *</label>
-                      <input
-                        type="text"
-                        value={formData.fullName}
-                        onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                        placeholder="Your full name"
-                        className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#0052CC] mt-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-1">Phone *</label>
-                      <input
-                        type="tel"
-                        value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        placeholder="+91 XXXXX XXXXX"
-                        className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#0052CC] mt-1"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-1">Monthly Income (₹)</label>
-                      <input
-                        type="number"
-                        value={formData.monthlyIncome}
-                        onChange={(e) => setFormData({ ...formData, monthlyIncome: e.target.value })}
-                        placeholder="e.g. 50000"
-                        className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#0052CC] mt-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-1">Occupants</label>
-                      <select
-                        value={formData.occupantsCount}
-                        onChange={(e) => setFormData({ ...formData, occupantsCount: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#0052CC] bg-white mt-1"
-                      >
-                        {[1, 2, 3, 4, 5].map((n) => (
-                          <option key={n} value={n}>{n} {n === 1 ? "person" : "people"}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
                   <div>
-                    <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-1">Target Move-in Date</label>
+                    <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-1">Full Name *</label>
                     <input
-                      type="date"
-                      value={formData.targetMoveInDate}
-                      onChange={(e) => setFormData({ ...formData, targetMoveInDate: e.target.value })}
+                      type="text"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="Your full name"
                       className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#0052CC] mt-1"
                     />
                   </div>
                   <div>
-                    <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-1">Notes (optional)</label>
-                    <textarea
-                      value={formData.notes}
-                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                      placeholder="Anything you'd like the landlord to know..."
-                      rows={3}
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#0052CC] resize-none mt-1"
+                    <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-1">Phone Number *</label>
+                    <input
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      placeholder="+91 XXXXX XXXXX"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#0052CC] mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-1">Email *</label>
+                    <input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="you@example.com"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#0052CC] mt-1"
                     />
                   </div>
 
@@ -522,17 +474,17 @@ export default function PropertyDetailPage() {
 
                   <div className="bg-blue-50 rounded-xl p-3">
                     <p className="text-xs text-[#0052CC] font-medium">
-                      🔒 Your Govt ID will only be requested if the landlord pre-approves this application. We protect your privacy.
+                      📞 The owner will contact you via call, WhatsApp, or email to discuss further details and schedule a visit.
                     </p>
                   </div>
 
                   <button
-                    onClick={handleSubmitApplication}
+                    onClick={handleSubmitBooking}
                     disabled={submitting}
                     className="w-full py-4 bg-[#0052CC] text-white rounded-xl font-black text-sm hover:bg-[#0041a3] transition-colors shadow-lg shadow-blue-200 disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {submitting && <Loader2 size={16} className="animate-spin" />}
-                    {submitting ? "Submitting..." : "Submit Application"}
+                    {submitting ? "Sending..." : "Send My Contact Details"}
                   </button>
                 </div>
               )}
@@ -543,3 +495,4 @@ export default function PropertyDetailPage() {
     </div>
   );
 }
+

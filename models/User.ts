@@ -51,8 +51,4 @@ const UserSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
-if (process.env.NODE_ENV !== "production") {
-  delete mongoose.models.User;
-}
-
 export default mongoose.models.User || mongoose.model("User", UserSchema);

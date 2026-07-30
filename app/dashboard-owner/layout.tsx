@@ -7,7 +7,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { 
   LayoutGrid, Building2, Wrench, ShieldCheck, IndianRupee, 
-  Settings, LogOut, PlusCircle, X, Plus, MessageSquare, LayoutTemplate, ClipboardList
+  Settings, LogOut, PlusCircle, X, Plus, MessageSquare, LayoutTemplate, ClipboardList, UserCheck
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PropertyProvider, useProperty } from "../context/PropertyContext";
@@ -17,6 +17,7 @@ const ownerNavItems = [
   { name: "Portfolio", href: "/dashboard-owner", icon: LayoutGrid, color: "#1F2937" },
   { name: "Properties", href: "/dashboard-owner/propertiess", icon: Building2, color: "#0052CC" },
   { name: "Applications", href: "/dashboard-owner/applications", icon: ClipboardList, color: "#8B5CF6" },
+  { name: "Onboard Customers", href: "/dashboard-owner/onboarding", icon: UserCheck, color: "#10B981" },
   { name: "Messages", href: "/dashboard-owner/messages", icon: MessageSquare, color: "#3B82F6" },
   { name: "Maintenance", href: "/dashboard-owner/maintenance", icon: Wrench, color: "#F59E0B" },
   { name: "Inspections", href: "/dashboard-owner/inspections", icon: ShieldCheck, color: "#0D9488" },

@@ -46,10 +46,11 @@ const PropertySchema = new mongoose.Schema({
     signedAt: { type: Date },
   },
 
-  // Operational tenancy status (used internally by the tenancy workflow)
+  // Operational tenancy status — tracks full lifecycle of the property
+  // vacant → pending_payment → waiting_payment_approval → occupied → under_notice
   status: {
     type: String,
-    enum: ["vacant", "occupied", "under_notice"],
+    enum: ["vacant", "pending_payment", "waiting_payment_approval", "occupied", "under_notice"],
     default: "vacant",
   },
 

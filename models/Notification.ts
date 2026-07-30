@@ -28,9 +28,5 @@ const NotificationSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
-if (process.env.NODE_ENV !== "production") {
-  delete mongoose.models.Notification;
-}
-
 export default mongoose.models.Notification ||
   mongoose.model("Notification", NotificationSchema);

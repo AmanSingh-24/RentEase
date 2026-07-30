@@ -17,6 +17,7 @@ interface SessionUser {
   hostStatus: "not_applied" | "pending" | "approved" | "rejected";
   firstHostLogin: boolean;
   rejectionReason: string;
+  propertyId?: string | null;
 }
 
 export default function Navbar() {
@@ -33,6 +34,8 @@ export default function Navbar() {
   const [session, setSession] = useState<SessionUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [showFirstHostModal, setShowFirstHostModal] = useState(false);
+  // For tenants with an active booking — smart dashboard link
+  const [tenantDashboardHref, setTenantDashboardHref] = useState<string | null>(null);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -45,6 +48,28 @@ export default function Navbar() {
             // Trigger congrats modal if first login after host approval
             if (data.user.firstHostLogin && data.user.hostStatus === "approved") {
               setShowFirstHostModal(true);
+            }
+            // For tenants: determine correct dashboard link based on booking status
+            if (data.user.role === "tenant" || data.user.role === "pending") {
+              if (data.user.propertyId) {
+                setTenantDashboardHref("/dashboard-tenant");
+              } else {
+                // Check active booking
+                try {
+                  const bRes = await fetch("/api/bookings/tenant");
+                  const bData = await bRes.json();
+                  if (bRes.ok && bData.booking) {
+                    const propStatus = bData.booking.propertyId?.status;
+                    if (propStatus === "occupied") {
+                      setTenantDashboardHref("/dashboard-tenant");
+                    } else if (propStatus === "waiting_payment_approval") {
+                      setTenantDashboardHref("/dashboard/onboarding-approvals");
+                    } else if (bData.booking.status === "pending_payment") {
+                      setTenantDashboardHref("/dashboard/onboarding-payment");
+                    }
+                  }
+                } catch { /* no booking */ }
+              }
             }
           }
         }
@@ -86,7 +111,9 @@ export default function Navbar() {
   const getDashboardLink = () => {
     if (session?.role === "admin") return "/admin/dashboard";
     if (session?.role === "owner") return "/dashboard-owner";
-    if (session?.role === "tenant") return "/dashboard-tenant";
+    if (session?.role === "tenant" || session?.role === "pending") {
+      return tenantDashboardHref || "/dashboard-tenant";
+    }
     return "/";
   };
 
@@ -325,6 +352,15 @@ export default function Navbar() {
           <div className="flex items-center gap-2">
             {/* Host status button — changes based on hostStatus */}
             {renderHostButton()}
+
+            {/* Tenant Dashboard button — shown whenever tenant has an active booking or is onboarded */}
+            {session && (session.role === "tenant" || session.role === "pending") && tenantDashboardHref && (
+              <Link href={tenantDashboardHref}>
+                <button className="hidden sm:flex items-center gap-2 text-sm font-black text-white bg-[#0052CC] px-4 py-2 rounded-xl hover:bg-[#0041a3] transition-colors shadow-md shadow-blue-200">
+                  <LayoutDashboard size={14} /> Dashboard
+                </button>
+              </Link>
+            )}
 
             {authLoading ? (
               <div className="w-9 h-9 bg-gray-100 rounded-xl animate-pulse" />

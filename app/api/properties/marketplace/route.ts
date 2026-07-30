@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import Property from "@/models/Property";
+import User from "@/models/User";
 
 /**
  * GET /api/properties/marketplace
@@ -16,6 +17,7 @@ export async function GET(request: Request) {
     await connectToDatabase();
     const { searchParams } = new URL(request.url);
 
+    const id = searchParams.get("id");
     const city = searchParams.get("city");
     const pincode = searchParams.get("pincode");
     const bhk = searchParams.get("bhk");
@@ -26,6 +28,7 @@ export async function GET(request: Request) {
     // Base filter — only approved marketplace listings
     const query: any = { listingStatus: "active_marketplace" };
 
+    if (id) query._id = id;
     if (city) query.city = { $regex: city.trim(), $options: "i" };
     if (pincode) query.pincode = pincode.trim();
     if (bhk) query.bhk = Number(bhk);

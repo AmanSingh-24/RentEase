@@ -66,6 +66,16 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL("/login", request.url));
   }
 
+  // ── PRE-ONBOARDING TENANT PAGES /dashboard/* ─────────────────────────────
+  // These pages are for tenants who have been assigned a property but haven't
+  // completed payment yet. They need to be authenticated but don't have propertyId.
+  if (pathname.startsWith("/dashboard/")) {
+    if (!token) return NextResponse.redirect(new URL("/login", request.url));
+    const payload = await verifyToken(token);
+    if (!payload || (payload.role !== "tenant" && payload.role !== "pending"))
+      return NextResponse.redirect(new URL("/login", request.url));
+  }
+
   // ── ROLE SELECTION ───────────────────────────────────────────────────────
   if (pathname.startsWith("/role-selection")) {
     if (!token) return NextResponse.redirect(new URL("/login", request.url));
@@ -100,6 +110,7 @@ export const config = {
   matcher: [
     "/dashboard-owner/:path*",
     "/dashboard-tenant/:path*",
+    "/dashboard/:path*",
     "/role-selection/:path*",
     "/admin/:path*",
     "/onboarding/landlord/:path*",
