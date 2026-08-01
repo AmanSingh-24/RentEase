@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "RentEase — Smart Rental Management",
+  title: "RentEase - Property Management Made Simple",
   description:
     "India's trusted digital rental platform. Protect your tenancy with timestamped photo evidence, smart lease management, and zero-dispute move-outs.",
 };

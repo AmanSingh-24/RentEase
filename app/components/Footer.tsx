@@ -1,111 +1,203 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
-import { Twitter, Instagram, Facebook, Mail } from "lucide-react";
+import {
+  ArrowRight,
+  Facebook,
+  Home,
+  Instagram,
+  Mail,
+  MapPin,
+  Phone,
+  Youtube,
+} from "lucide-react";
 
-export default function Footer() {
+export interface FooterNavLink {
+  label: string;
+  href: string;
+}
+
+export interface FooterProps {
+  badge?: string;
+  heading?: string;
+  description?: string;
+  ctaLabel?: string;
+  ctaHref?: string;
+  bgImageSrc?: string;
+  logoLabel?: string;
+  tagline?: string;
+  exploreLinks?: FooterNavLink[];
+  contactEmail?: string;
+  contactPhone?: string;
+  contactLocation?: string;
+  copyrightText?: string;
+  craftedByLabel?: string;
+  privacyHref?: string;
+  className?: string;
+}
+
+const DEFAULT_EXPLORE_LINKS: FooterNavLink[] = [
+  { label: "Properties", href: "#" },
+  { label: "Services", href: "#" },
+  { label: "About", href: "#" },
+  { label: "Contact Us", href: "#" },
+];
+
+/** Minimal inline X (Twitter) glyph — lucide doesn't ship the current logo. */
+function XIcon({ size = 16 }: { size?: number }) {
   return (
-    <footer className="relative bg-[#1F2937] text-white">
-      {/* 1. THE MOUNTAIN RISE CURVE */}
-      {/* This convex arch rises from left to right to meet the CTA section */}
-      <div className="absolute top-0 left-0 w-full overflow-hidden leading-[0] transform -translate-y-[99%]">
-        <svg 
-          viewBox="0 0 1200 120" 
-          preserveAspectRatio="none" 
-          className="relative block w-full h-[60px] md:h-[120px]"
-          fill="#1F2937"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path d="M0,120 C300,0 900,0 1200,120 H0 Z"></path>
-        </svg>
-      </div>
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M18.244 2H21.5l-7.5 8.57L23 22h-6.828l-5.35-6.554L4.7 22H1.44l8.02-9.17L1 2h6.994l4.84 5.995L18.244 2Zm-1.197 18h1.804L7.045 3.9H5.117L17.047 20Z" />
+    </svg>
+  );
+}
 
-      <div className="max-w-7xl mx-auto px-6 pt-16 md:pt-24 pb-12">
-        {/* MAIN CONTENT GRID */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-y-16 gap-x-12 mb-24">
+export default function Footer({
+  badge = "Find your next home",
+  heading = "Discover homes designed\nfor your lifestyle",
+  description = "Explore properties, compare options, and move forward with confidence — everything you need in one place.",
+  ctaLabel = "Get In Touch",
+  ctaHref = "#contact",
+  bgImageSrc = "/footer.png",
+  logoLabel = "Homy",
+  tagline = "Find, explore, and choose your next home with a simple and modern experience.",
+  exploreLinks = DEFAULT_EXPLORE_LINKS,
+  contactEmail = "homy@yourdomain.com",
+  contactPhone = "+123 456 000",
+  contactLocation = "New York, USA",
+  copyrightText = "Copyright ©2026",
+  craftedByLabel = "Crafted by",
+  privacyHref = "#",
+  className = "",
+}: FooterProps) {
+  return (
+    <footer className={`w-full bg-white px-4 py-4 sm:px-6 sm:py-6 md:px-1 md:py-1 ${className}`}>
+      <div className="relative h-[720px] w-full overflow-hidden rounded-[32px] bg-neutral-950 md:h-[820px] md:rounded-[48px] lg:h-[900px]">
+        {/* Background Layer (z-0) — single image: sky fading into the house */}
+        <Image
+          src={bgImageSrc}
+          alt="Featured modern home"
+          fill
+          priority
+          loading="eager"
+          sizes="100vw"
+          className="z-0 object-cover object-center"
+        />
+
+        {/* Readability overlay (z-10) — subtle at top for the heading, deeper toward the bottom where nav sits */}
+        <div className="absolute inset-0 z-10 bg-gradient-to-b from-black/25 via-transparent to-black/80" />
+
+        {/* Extra blend layer (z-10) — soft, gradual darkening so the nav feels like part of the photo, not a bar on top of it */}
+        <div className="absolute inset-x-0 bottom-0 z-10 h-[55%] bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+
+        {/* Content Layer (z-20) — badge, heading, description, CTA */}
+        <div className="relative z-20 flex flex-col items-center px-6 pt-14 text-center md:pt-16">
+          <div className="mb-4 flex items-center gap-2 text-sm font-medium text-white/80">
+            <span className="flex h-4 w-4 items-center justify-center rounded-full border border-white/50">
+              <span className="h-1.5 w-1.5 rounded-full bg-white" />
+            </span>
+            {badge}
+          </div>
+
+          <h2 className="max-w-2xl text-4xl font-extrabold leading-[1.05] tracking-tight text-white md:text-5xl">
+            {heading.split("\n").map((line, i) => (
+              <span key={i} className="block">
+                {line}
+              </span>
+            ))}
+          </h2>
+
+          <p className="mt-5 max-w-md text-base text-white/70">{description}</p>
+
           
-          {/* COLUMN 1 & 2: BRAND & LOGO */}
-          <div className="col-span-2 lg:col-span-2">
-            <div className="relative w-[220px] h-[55px] mb-8">
-              <Image 
-                src="/desk.png" 
-                alt="RentEase Logo" 
-                fill 
-                className="object-contain object-left brightness-170" 
-                priority
-              />
-            </div>
-            <p className="text-gray-400 max-w-sm mb-10 text-lg leading-relaxed">
-              Your digital witness in every rental transaction. Documenting 
-              property states with cryptographic certainty.
-            </p>
-            
-            {/* SOCIAL ICONS - Standard Professional Style */}
-            <div className="flex gap-6">
-              <Link href="#" className="text-gray-400 hover:text-[#0052CC] transition-colors border border-gray-500 rounded-xl p-1.5">
-                <Twitter size={24} strokeWidth={1.5} />
-              </Link>
-              <Link href="#" className="text-gray-400 hover:text-[#cc006d] transition-colors border border-gray-500 rounded-xl p-1.5">
-                <Instagram size={24} strokeWidth={1.5} />
-              </Link>
-              <Link href="#" className="text-gray-400 hover:text-[#0765f3] transition-colors border border-gray-500 rounded-xl p-1.5">
-                <Facebook size={24} strokeWidth={1.5} />
-              </Link>
-              <Link href="mailto:support@rentease.com" className="text-gray-400 hover:text-[#cefa09] transition-colors border border-gray-500 rounded-xl p-1.5">
-                <Mail size={24} strokeWidth={1.5} />
-              </Link>
-            </div>
-          </div>
-
-          {/* COLUMN 3: PRODUCT */}
-          <div>
-            <h4 className="text-white font-bold mb-8 uppercase tracking-[0.2em] text-[10px]">Product</h4>
-            <ul className="space-y-5 text-gray-400 text-sm font-medium">
-              <li><Link href="#hero" className="hover:text-white transition-colors">Move-in Protocol</Link></li>
-              <li><Link href="#problem" className="hover:text-white transition-colors">Dispute Settle</Link></li>
-              <li><Link href="#how-it-works" className="hover:text-white transition-colors">Maintenance Tracking</Link></li>
-              <li><Link href="#" className="hover:text-white transition-colors">Security Vault</Link></li>
-            </ul>
-          </div>
-
-          {/* COLUMN 4: RESOURCES */}
-          <div>
-            <h4 className="text-white font-bold mb-8 uppercase tracking-[0.2em] text-[10px]">Resources</h4>
-            <ul className="space-y-5 text-gray-400 text-sm font-medium">
-              <li><Link href="#" className="hover:text-white transition-colors">Help Center</Link></li>
-              <li><Link href="#" className="hover:text-white transition-colors">Legal Templates</Link></li>
-              <li><Link href="#" className="hover:text-white transition-colors">Rental Guide</Link></li>
-              <li><Link href="#" className="hover:text-white transition-colors">API Access</Link></li>
-            </ul>
-          </div>
-
-          {/* COLUMN 5: LEGAL */}
-          <div>
-            <h4 className="text-white font-bold mb-8 uppercase tracking-[0.2em] text-[10px]">Legal</h4>
-            <ul className="space-y-5 text-gray-400 text-sm font-medium">
-              <li><Link href="#" className="hover:text-white transition-colors">Privacy Policy</Link></li>
-              <li><Link href="#" className="hover:text-white transition-colors">Terms of Service</Link></li>
-              <li><Link href="#" className="hover:text-white transition-colors">Trust & Safety</Link></li>
-              <li><Link href="#" className="hover:text-white transition-colors">Evidence Law</Link></li>
-            </ul>
-          </div>
+<a
+  href={ctaHref}
+  className="mt-6 inline-flex items-center gap-2 rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+>
+  {ctaLabel}
+  <ArrowRight size={14} strokeWidth={2.5} />
+</a>
         </div>
 
-        {/* BOTTOM UTILITY BAR */}
-        <div className="pt-10 border-t border-white/5 flex flex-col lg:flex-row justify-between items-center gap-10">
-          <div className="flex flex-col md:flex-row items-center gap-6">
-             <p className="text-gray-500 text-xs">© 2026 RentEase Tech. All rights reserved.</p>
-             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#0D9488]/10 border border-[#0D9488]/20">
-               <div className="w-1.5 h-1.5 rounded-full bg-[#0D9488] animate-pulse" />
-               <span className="text-[10px] font-bold text-[#0D9488] uppercase tracking-widest">Digital Witness Active</span>
-             </div>
+        {/* Footer nav — no solid bar, just sits in the darkened base of the image */}
+        <div className="absolute inset-x-0 bottom-0 z-20">
+          <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-6 pb-10 pt-24 md:grid-cols-[1.4fr_1fr_1fr] md:gap-6 md:px-10 md:pt-28">
+            {/* Brand column */}
+            <div>
+              <div className="flex items-center gap-2 text-white">
+                <Home size={18} />
+                <span className="text-lg font-bold">{logoLabel}</span>
+              </div>
+              <p className="mt-3 max-w-xs text-sm text-white/60">{tagline}</p>
+              <div className="mt-5 flex items-center gap-3">
+{[Instagram, Facebook, XIcon, Youtube].map((Icon, i) => (
+  <a
+    key={i}
+    href="#"
+    aria-label="Social link"
+    className="flex h-8 w-8 items-center justify-center rounded-full border border-white/20 text-white/80 transition-colors hover:border-white/50 hover:text-white"
+  >
+    <Icon size={14} />
+  </a>
+))}
+              </div>
+            </div>
+
+            {/* Explore column */}
+            <div>
+              <p className="mb-4 text-sm font-semibold text-white">Explore</p>
+              <ul className="flex flex-col gap-3">
+{exploreLinks.map((link) => (
+  <li key={link.label}>
+    <a
+      href={link.href}
+      className="text-sm text-white/60 transition-colors hover:text-white"
+    >
+      {link.label}
+    </a>
+  </li>
+))}
+              </ul>
+            </div>
+
+            {/* Contact column */}
+            <div>
+              <p className="mb-4 text-sm font-semibold text-white">Contact</p>
+              <ul className="flex flex-col gap-3 text-sm text-white/60">
+                <li className="flex items-center gap-2">
+                  <Mail size={14} />
+                  {contactEmail}
+                </li>
+                <li className="flex items-center gap-2">
+                  <Phone size={14} />
+                  {contactPhone}
+                </li>
+                <li className="flex items-center gap-2">
+                  <MapPin size={14} />
+                  {contactLocation}
+                </li>
+              </ul>
+            </div>
           </div>
-          
-          <div className="flex items-center gap-8">
-            <p className="text-gray-500 text-[11px] uppercase tracking-widest font-semibold">Bengaluru • London • Dubai</p>
-            <div className="h-4 w-[1px] bg-white/10 hidden md:block" />
-            <p className="text-gray-500 text-xs italic">Secure. Documented. Settled.</p>
+
+          {/* Bottom bar */}
+          <div className="border-t border-white/10">
+            <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-6 py-5 text-xs text-white/50 md:flex-row md:justify-between md:px-10">
+              <span>{copyrightText}</span>
+              <span className="flex items-center gap-1.5">
+                {craftedByLabel}
+                <span className="font-semibold text-white/70">Framer</span>
+              </span>
+              <a href={privacyHref} className="transition-colors hover:text-white">
+                Privacy Policy
+              </a>
+            </div>
           </div>
         </div>
       </div>

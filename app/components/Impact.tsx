@@ -43,7 +43,7 @@ export default function Impact() {
             </div>
 
             {/* Heading */}
-            <h2 className="mt-5 text-5xl font-extrabold leading-[1.05] tracking-tight text-neutral-950 sm:text-6xl">
+            <h2 className="mt-5 text-5xl font-bold leading-[1.05] tracking-tight text-neutral-950 sm:text-6xl">
               <span className="block">Real insights behind</span>
               <span className="block">every property decision</span>
             </h2>

@@ -8,6 +8,15 @@ const config: Config = {
 ],
   theme: {
     extend: {
+          keyframes: {
+      "highlights-marquee": {
+        "0%": { transform: "translateX(0)" },
+        "100%": { transform: "translateX(-25%)" },
+      },
+    },
+    animation: {
+      "highlights-marquee": "highlights-marquee 22s linear infinite",
+    },
       colors: {
         brand: {
           blue: "#0052CC",    // Primary (Authority)

@@ -5,11 +5,10 @@ import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter, usePathname } from "next/navigation";
-import { LogOut, ChevronDown, LayoutDashboard, Shield, Clock, Home, AlertCircle } from "lucide-react";
+import { LogOut, ChevronDown, LayoutDashboard, Shield, Clock, Home, AlertCircle, ArrowRight } from "lucide-react";
 import NotificationBell from "./NotificationBell";
 import FirstHostModal from "./FirstHostModal";
 
-// ── Session type ──────────────────────────────────────────────────────────────
 interface SessionUser {
   _id: string;
   name: string;
@@ -30,11 +29,9 @@ export default function Navbar() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const hostPanelRef = useRef<HTMLDivElement>(null);
 
-  // ── Auth & session ────────────────────────────────────────────────────────
   const [session, setSession] = useState<SessionUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [showFirstHostModal, setShowFirstHostModal] = useState(false);
-  // For tenants with an active booking — smart dashboard link
   const [tenantDashboardHref, setTenantDashboardHref] = useState<string | null>(null);
 
   useEffect(() => {
@@ -45,16 +42,13 @@ export default function Navbar() {
           const data = await res.json();
           if (data.user) {
             setSession(data.user);
-            // Trigger congrats modal if first login after host approval
             if (data.user.firstHostLogin && data.user.hostStatus === "approved") {
               setShowFirstHostModal(true);
             }
-            // For tenants: determine correct dashboard link based on booking status
             if (data.user.role === "tenant" || data.user.role === "pending") {
               if (data.user.propertyId) {
                 setTenantDashboardHref("/dashboard-tenant");
               } else {
-                // Check active booking
                 try {
                   const bRes = await fetch("/api/bookings/tenant");
                   const bData = await bRes.json();
@@ -79,16 +73,45 @@ export default function Navbar() {
     checkSession();
   }, [pathname]);
 
-  // Scroll + resize listeners
+  // Hero-aware navbar: watch the sentinel placed at the bottom of the Hero
+  // section instead of hardcoding a scrollY threshold. If a given route has
+  // no Hero (no #hero-sentinel in the DOM), fall back to the solid navbar.
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
+    let observer: IntersectionObserver | null = null;
+    let frame: number;
+
+    const attach = () => {
+      const sentinel = document.getElementById("hero-sentinel");
+      if (!sentinel) {
+        setScrolled(true);
+        return;
+      }
+observer = new IntersectionObserver(
+  ([entry]) => {
+    setScrolled(!entry.isIntersecting);
+  },
+  {
+    threshold: 0,
+    rootMargin: "0px",
+  }
+);
+observer.observe(sentinel);
+    };
+
+    frame = requestAnimationFrame(attach);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      observer?.disconnect();
+    };
+  }, [pathname]);
+
+  useEffect(() => {
     const onResize = () => { if (window.innerWidth >= 768) setIsOpen(false); };
-    window.addEventListener("scroll", onScroll);
     window.addEventListener("resize", onResize);
-    return () => { window.removeEventListener("scroll", onScroll); window.removeEventListener("resize", onResize); };
+    return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // Close dropdowns on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setUserDropdown(false);
@@ -98,7 +121,6 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // ── Actions ───────────────────────────────────────────────────────────────
   const handleLogout = () => {
     document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     setSession(null);
@@ -136,14 +158,12 @@ export default function Navbar() {
     ? session.name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2)
     : "?";
 
-  // ── Host Status Button ────────────────────────────────────────────────────
-  // Renders different CTAs based on hostStatus
   const renderHostButton = () => {
     if (!session) {
       return (
         <button
           onClick={handleRentYourHome}
-          className="hidden sm:block text-sm font-bold text-[#1F2937] px-4 py-2 hover:text-[#0052CC] transition-colors border border-gray-200 rounded-xl hover:border-[#0052CC]"
+          className="hidden sm:block text-sm font-bold text-[#1F2937] px-4 py-2 hover:text-[#0052CC] transition-colors"
         >
           Rent Your Home
         </button>
@@ -287,7 +307,6 @@ export default function Navbar() {
     return null;
   };
 
-  // ── Mobile host status label ───────────────────────────────────────────────
   const getMobileHostLabel = () => {
     if (!session || session.hostStatus === "not_applied") return "Rent Your Home";
     if (session.hostStatus === "pending") return "Application (Pending)";
@@ -298,7 +317,6 @@ export default function Navbar() {
 
   return (
     <>
-      {/* First-host congratulations modal */}
       {showFirstHostModal && session && (
         <FirstHostModal
           userName={session.name}
@@ -309,31 +327,33 @@ export default function Navbar() {
         />
       )}
 
-      <nav
-        className={`fixed top-0 w-full z-50 transition-all duration-300 ${
-          scrolled || isOpen
-            ? "bg-white border-b border-gray-200 py-3 shadow-sm"
-            : "bg-white py-3"
-        }`}
-      >
-        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          {/* LOGO */}
+<nav
+  className={`fixed inset-x-0 top-0 z-50 transition-all duration-500 ${
+    scrolled || isOpen
+      ? "bg-white/90 backdrop-blur-xl border-b border-neutral-200 shadow-sm py-3"
+      : "bg-transparent border-transparent shadow-none py-5"
+  }`}
+>
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 flex items-center justify-between">
           <Link href="/" className="flex items-center" onClick={() => setIsOpen(false)}>
-            <div className="hidden md:block relative w-[220px] h-[50px]">
+            <div className="hidden md:block relative w-[220px] h-[48px]">
               <Image src="/desk3.png" alt="RentEase" fill className="object-contain object-left" priority />
             </div>
             <div className="block md:hidden relative w-[40px] h-[40px]">
-              <Image src="/mob.png" alt="RentEase" fill className="object-contain" priority />
+              <Image src="/desk3.png" alt="RentEase" fill className="object-contain" priority />
             </div>
           </Link>
 
-          {/* CENTER LINKS — Desktop */}
           <div className="hidden md:flex items-center space-x-8">
             {navLinks.map((link) => (
               <Link
                 key={link.name}
                 href={link.href}
-                className="text-[#1F2937] font-medium text-sm hover:text-[#0052CC] transition-colors relative group px-3"
+                className={`text-sm transition-colors relative group px-3 font-bold ${
+  scrolled
+    ? "text-[#1F2937] hover:text-[#0052CC]"
+    : "text-black hover:text-[#0052CC]"
+}`}
               >
                 {link.name}
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-[#0052CC] transition-all duration-300 group-hover:w-full" />
@@ -341,12 +361,9 @@ export default function Navbar() {
             ))}
           </div>
 
-          {/* RIGHT SIDE */}
           <div className="flex items-center gap-2">
-            {/* Host status button — changes based on hostStatus */}
             {renderHostButton()}
 
-            {/* Tenant Dashboard button — shown whenever tenant has an active booking or is onboarded */}
             {session && (session.role === "tenant" || session.role === "pending") && tenantDashboardHref && (
               <Link href={tenantDashboardHref}>
                 <button className="hidden sm:flex items-center gap-2 text-sm font-black text-white bg-[#0052CC] px-4 py-2 rounded-xl hover:bg-[#0041a3] transition-colors shadow-md shadow-blue-200">
@@ -359,10 +376,8 @@ export default function Navbar() {
               <div className="w-9 h-9 bg-gray-100 rounded-xl animate-pulse" />
             ) : session ? (
               <div className="flex items-center gap-2">
-                {/* Notification Bell */}
                 <NotificationBell userId={session._id} />
 
-                {/* User Dropdown */}
                 <div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setUserDropdown(!userDropdown)}
@@ -427,13 +442,12 @@ export default function Navbar() {
                 <Link href="/login" className="hidden sm:block text-sm font-bold text-[#1F2937] px-4 py-2 hover:text-[#0052CC] transition-colors">
                   Login
                 </Link>
-                <Link href="/signup" className="hidden sm:block bg-[#0052CC] text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-blue-500/20 hover:bg-[#1E40AF] transition-all active:scale-95">
-                  Get Started
+                <Link href="/signup" className="hidden sm:block bg-[#000000] text-white px-5 py-2.5 rounded-2xl text-sm font-bold shadow-lg shadow-blue-500/20 hover:bg-[#05060b] transition-all active:scale-95">
+                  Get Started 
                 </Link>
               </>
             )}
 
-            {/* Hamburger */}
             <button className="md:hidden text-[#1F2937] p-1 outline-none" onClick={() => setIsOpen(!isOpen)}>
               <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 {isOpen
@@ -444,7 +458,6 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* MOBILE MENU */}
         <AnimatePresence>
           {isOpen && (
             <motion.div
