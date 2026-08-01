@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import IntroScreen from "./components/IntroScreen";
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
+import Impact from "./components/Impact";
+import Active from "./components/Active";
+import Services from "./components/Services";
 import Problem from "./components/Problem";
 import HowItWorks from "./components/HowItWorks";
 import SocialProof from "./components/SocialProof";
@@ -44,6 +47,18 @@ export default function Home() {
 
         <section id="hero" className="min-h-screen pt-20">
           <Hero />
+        </section>
+
+        <section id="impact" className="bg-[#F9FAFB] py-20">
+          <Impact />
+        </section>
+
+        <section id="active" className="py-20 bg-[#F9FAFB]">
+          <Active />
+        </section>
+
+        <section id="services" className="bg-[#F9FAFB] py-20">
+          <Services />
         </section>
 
         <section id="problem" className="bg-[#F9FAFB] py-20">

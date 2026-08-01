@@ -320,7 +320,7 @@ export default function Navbar() {
           {/* LOGO */}
           <Link href="/" className="flex items-center" onClick={() => setIsOpen(false)}>
             <div className="hidden md:block relative w-[220px] h-[50px]">
-              <Image src="/desk.png" alt="RentEase" fill className="object-contain object-left" priority />
+              <Image src="/desk3.png" alt="RentEase" fill className="object-contain object-left" priority />
             </div>
             <div className="block md:hidden relative w-[40px] h-[40px]">
               <Image src="/mob.png" alt="RentEase" fill className="object-contain" priority />
@@ -339,13 +339,6 @@ export default function Navbar() {
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-[#0052CC] transition-all duration-300 group-hover:w-full" />
               </Link>
             ))}
-            <Link
-              href="/properties"
-              className="text-[#1F2937] font-medium text-sm hover:text-[#0052CC] transition-colors relative group px-3"
-            >
-              Explore Properties
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-[#0052CC] transition-all duration-300 group-hover:w-full" />
-            </Link>
           </div>
 
           {/* RIGHT SIDE */}
