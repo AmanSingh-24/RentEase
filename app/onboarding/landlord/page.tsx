@@ -110,6 +110,10 @@ export default function LandlordOnboardingPage() {
     furnishing: "",
     amenities: [] as string[],
     description: "",
+    propertyType: "",
+    totalFloors: "",
+    floorNumber: "",
+    petsAllowed: false,
   });
 
   // Step 4 — Photos
@@ -245,6 +249,10 @@ export default function LandlordOnboardingPage() {
           furnishing: features.furnishing,
           amenities: features.amenities,
           description: features.description,
+          propertyType: features.propertyType || undefined,
+          totalFloors: features.totalFloors || undefined,
+          floorNumber: features.floorNumber || undefined,
+          petsAllowed: features.petsAllowed,
           listingImagesBase64: photos,
           rentAmount: pricing.rentAmount,
           depositAmount: pricing.depositAmount,
@@ -472,6 +480,86 @@ export default function LandlordOnboardingPage() {
                         <p className="font-black text-[#1F2937] text-sm">{f.label}</p>
                         <p className="text-[10px] text-gray-400">{f.desc}</p>
                         {features.furnishing === f.id && <CheckCircle size={16} className="text-[#0052CC] self-end" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Property Type */}
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-3">Property Type</label>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    {[
+                      { id: "apartment", label: "Apartment", emoji: "🏢" },
+                      { id: "house",     label: "House",     emoji: "🏠" },
+                      { id: "villa",     label: "Villa",     emoji: "🏰" },
+                      { id: "studio",    label: "Studio",    emoji: "🛋️" },
+                      { id: "pg",        label: "PG",        emoji: "🛏️" },
+                    ].map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setFeatures({ ...features, propertyType: t.id })}
+                        className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 text-center transition-all ${
+                          features.propertyType === t.id
+                            ? "border-[#0052CC] bg-blue-50"
+                            : "border-gray-200 hover:border-gray-300"
+                        }`}
+                      >
+                        <span className="text-2xl">{t.emoji}</span>
+                        <p className="font-black text-[#1F2937] text-xs">{t.label}</p>
+                        {features.propertyType === t.id && <CheckCircle size={14} className="text-[#0052CC]" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Floor Details */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-2">
+                      Floor Number <span className="normal-case font-normal">(which floor is the unit)</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={features.floorNumber}
+                      onChange={(e) => setFeatures({ ...features, floorNumber: e.target.value })}
+                      placeholder="e.g. 3"
+                      className="w-full px-5 py-4 border border-gray-200 rounded-2xl text-sm outline-none focus:border-[#0052CC]"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-2">
+                      Total Floors <span className="normal-case font-normal">(in the building)</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={features.totalFloors}
+                      onChange={(e) => setFeatures({ ...features, totalFloors: e.target.value })}
+                      placeholder="e.g. 8"
+                      className="w-full px-5 py-4 border border-gray-200 rounded-2xl text-sm outline-none focus:border-[#0052CC]"
+                    />
+                  </div>
+                </div>
+
+                {/* Pets Allowed */}
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-3">Pets Allowed?</label>
+                  <div className="flex gap-3">
+                    {[{ val: true, label: "Yes, pets welcome 🐾", emoji: "✅" }, { val: false, label: "No pets please", emoji: "🚫" }].map((opt) => (
+                      <button
+                        key={String(opt.val)}
+                        type="button"
+                        onClick={() => setFeatures({ ...features, petsAllowed: opt.val })}
+                        className={`flex-1 py-4 px-5 rounded-2xl border-2 font-bold text-sm transition-all ${
+                          features.petsAllowed === opt.val
+                            ? "border-[#0052CC] bg-blue-50 text-[#0052CC]"
+                            : "border-gray-200 text-gray-500 hover:border-gray-300"
+                        }`}
+                      >
+                        {opt.emoji} {opt.label}
                       </button>
                     ))}
                   </div>

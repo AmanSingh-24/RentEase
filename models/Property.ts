@@ -105,9 +105,32 @@ const PropertySchema = new mongoose.Schema({
   amenities: [{ type: String }], // e.g. ["WiFi", "Parking", "Generator"]
   description: { type: String }, // Listing description for marketplace
 
+  // ─── NEW FILTER FIELDS ────────────────────────────────────────────────────
+  propertyType: {
+    type: String,
+    enum: ["apartment", "house", "villa", "studio", "pg"],
+  },
+  totalFloors: { type: Number },    // Total floors in the building (e.g. 8)
+  floorNumber: { type: Number },    // Which floor the unit is on (e.g. 3)
+  petsAllowed: { type: Boolean, default: false },
+  // ──────────────────────────────────────────────────────────────────────────
+
   // ─────────────────────────────────────────────────────────────────────────
 
   createdAt: { type: Date, default: Date.now },
 });
+
+// ── Compound indexes for efficient marketplace filter queries ─────────────────
+PropertySchema.index({ listingStatus: 1, city: 1 });
+PropertySchema.index({ listingStatus: 1, state: 1 });
+PropertySchema.index({ listingStatus: 1, rentAmount: 1 });
+PropertySchema.index({ listingStatus: 1, bhk: 1 });
+PropertySchema.index({ listingStatus: 1, furnishing: 1 });
+PropertySchema.index({ listingStatus: 1, propertyType: 1 });
+PropertySchema.index({ listingStatus: 1, petsAllowed: 1 });
+PropertySchema.index({ listingStatus: 1, createdAt: -1 });
+// Full multi-filter compound (most specific queries hit this)
+PropertySchema.index({ listingStatus: 1, city: 1, bhk: 1, rentAmount: 1 });
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default mongoose.models.Property || mongoose.model("Property", PropertySchema);

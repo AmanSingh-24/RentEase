@@ -14,6 +14,9 @@ import {
   CheckCircle,
   Loader2,
 } from "lucide-react";
+import Navbar from "../../components/Navbar";
+import FAQ from "../../components/Faq";
+import Footer from "../../components/Footer";
 
 const FURNISHING_LABELS: Record<string, string> = {
   unfurnished: "Unfurnished",
@@ -155,19 +158,18 @@ export default function PropertyDetailPage() {
   const images = property.listingImages || [];
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB]">
+    <div className="min-h-screen bg-white">
       {/* ── Navbar ─────────────────────────────────────────────────────────── */}
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-20 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-4">
+      <Navbar />
+
+      {/* Back button sub-bar */}
+      <div className="pt-24 pb-2 bg-white">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-2 flex items-center">
           <Link href="/properties" className="flex items-center gap-2 text-gray-500 hover:text-[#1F2937] font-bold text-sm transition-colors">
             <ChevronLeft size={18} /> Back to Listings
           </Link>
-          <span className="text-gray-200">|</span>
-          <Link href="/" className="font-black text-lg text-[#1F2937] tracking-tight">
-            Rent<span className="text-[#0052CC]">Ease</span>
-          </Link>
         </div>
-      </header>
+      </div>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -492,6 +494,12 @@ export default function PropertyDetailPage() {
           </div>
         </div>
       )}
+
+      {/* ── FAQ Section ──────────────────────────────────────────────────────── */}
+      <FAQ />
+
+      {/* ── Footer ───────────────────────────────────────────────────────────── */}
+      <Footer />
     </div>
   );
 }

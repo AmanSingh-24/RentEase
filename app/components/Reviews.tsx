@@ -136,7 +136,7 @@ export default function Reviews({
   const track = [...scrollingItems, ...scrollingItems];
 
   return (
-    <section className={`w-full overflow-hidden bg-white py-20 px-35 ${className}`}>
+    <section className={`w-full overflow-hidden bg-[#F9FAFB] py-20 px-35 ${className}`}>
       <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 px-6 md:flex-row md:items-end md:px-10">
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold tracking-wide text-neutral-500">

@@ -77,7 +77,7 @@ export default function Impact() {
                   i !== STATS.length - 1 ? "border-b border-neutral-200" : ""
                 }`}
               >
-                <span className="text-4xl font-extrabold tracking-tight text-neutral-950 sm:text-5xl">
+                <span className="text-4xl font-bold tracking-tight text-neutral-950 sm:text-5xl">
                   {stat.value}
                 </span>
                 <span className="text-base font-medium uppercase tracking-wide text-neutral-800 sm:text-xl">

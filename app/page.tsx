@@ -46,9 +46,13 @@ export default function Home() {
           <Hero />
         </section>
 
-        <section id="impact" className="bg-[#F9FAFB] py-20">
-          <Impact />
-        </section>
+<section
+    id="impact"
+    className="relative bg-white pt-20 pb-20"
+>
+    <Impact />
+</section>
+
 
         <section id="active" className="py-20 bg-[#F9FAFB]">
           <Active />

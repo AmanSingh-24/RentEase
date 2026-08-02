@@ -114,7 +114,7 @@ export async function POST(request: Request) {
       // ── Step 1: Personal KYC
       kycFullName,
       kycPhone,
-      idDocumentBase64, // base64 string from frontend file reader
+      idDocumentBase64,
 
       // ── Step 2: Property Details
       address,
@@ -127,10 +127,16 @@ export async function POST(request: Request) {
       furnishing,
       amenities,
       description,
-      listingImagesBase64, // array of base64 strings
+      listingImagesBase64,
+
+      // ── New filter fields
+      propertyType,
+      totalFloors,
+      floorNumber,
+      petsAllowed,
 
       // ── Step 3: Ownership Proof
-      ownershipProofBase64, // base64 string (PDF or image)
+      ownershipProofBase64,
     } = body;
 
     if (!address || !city || !rentAmount || !bhk) {
@@ -212,6 +218,11 @@ export async function POST(request: Request) {
       listingImages: uploadedListingImages,
       ownershipProofUrl,
       structure,
+      // New filter fields
+      propertyType: propertyType || undefined,
+      totalFloors: totalFloors ? Number(totalFloors) : undefined,
+      floorNumber: floorNumber ? Number(floorNumber) : undefined,
+      petsAllowed: petsAllowed === true || petsAllowed === "true",
       listingStatus: "pending_approval",
       status: "vacant",
       leaseStartDate: new Date(),

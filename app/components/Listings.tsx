@@ -82,7 +82,7 @@ export default function Listings({
   className = "",
 }: ListingsProps) {
   return (
-    <section className={`w-full bg-white px-8 py-16 md:px-16 md:py-20 lg:px-40 lg:py-24 ${className}`}>
+    <section className={`w-full bg-[#F9FAFB] px-8 py-16 md:px-16 md:py-20 lg:px-40 lg:py-24 ${className}`}>
       {/* Header — same styling as Services for visual consistency */}
       <div className="mb-10 flex flex-col gap-6 lg:mb-14 lg:flex-row lg:items-end lg:justify-between">
         <div>

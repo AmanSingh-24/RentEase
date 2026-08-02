@@ -168,7 +168,7 @@ export default function Active() {
   let wordIndex = 0;
 
   return (
-    <section ref={sectionRef} className="relative h-screen overflow-hidden bg-white">
+    <section ref={sectionRef} className="relative h-screen overflow-hidden bg-[#F9FAFB]">
       <div
         className="flex h-full flex-col items-center justify-center px-6 antialiased"
         style={{ transform: "translateZ(0)", backfaceVisibility: "hidden" }}

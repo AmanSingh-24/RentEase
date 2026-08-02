@@ -15,7 +15,7 @@ export default function Hero() {
   return (
     <section
       id="home"
-      className="relative h-screen w-full overflow-hidden"
+      className="relative h-screen w-full overflow-visible"
     >
       {/* Background Image */}
       <Image
@@ -28,7 +28,10 @@ export default function Hero() {
       />
 
       {/* Light overlay for readability */}
-      <div className="absolute inset-0 bg-gradient-to-b from-white/5 via-transparent to-black/5" />
+      <div className="absolute inset-0 bg-gradient-to-b
+from-white/10
+via-transparent
+to-white/15" />
 
       {/* Hero Content */}
       <div className="relative z-10 flex h-full flex-col items-center justify-center px-6 pt-[110px] pb-16 text-center -translate-y-24 md:-translate-y-28">
@@ -102,6 +105,27 @@ export default function Hero() {
             Book a Visit
           </Link>
         </motion.div>
+      </div>
+
+            {/* Bottom Fog Transition */}
+      <div
+  className="
+absolute
+left-0
+right-0
+-bottom-10
+z-20
+h-[70px]
+pointer-events-none
+"
+>
+        {/* Fog Image */}
+<Image
+    src="/fog.png"
+    alt=""
+    fill
+    className="object-fill object-bottom"
+/>
       </div>
 
       {/* Navbar observer sentinel */}
