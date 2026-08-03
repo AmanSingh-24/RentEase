@@ -67,9 +67,9 @@ to-white/15" />
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
-          className="max-w-7xl text-5xl font-extrabold leading-[1.02] tracking-tight text-black md:text-8xl"
+          className="max-w-7xl text-5xl font-extrabold leading-[1.02] tracking-tight text-black md:text-7xl"
         >
-          Find Your Dream Home
+          Rent Smarter. Live Better.
         </motion.h1>
 
         {/* Description */}
@@ -77,10 +77,9 @@ to-white/15" />
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="mt-6 max-w-2xl text-lg font-medium leading-relaxed text-black/80 md:text-xl"
+          className="mt-6 max-w-2xl text-lg font-medium leading-relaxed text-black/80 md:text-md"
         >
-          Document your rental with timestamped photos. Track maintenance.
-          Settle disputes with proof, not arguments.
+         Find verified homes, manage payments, track maintenance, and protect every move with digital inspections - all in one seamless rental experience.
         </motion.p>
 
         {/* CTA Buttons */}

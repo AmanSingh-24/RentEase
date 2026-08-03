@@ -8,6 +8,7 @@ import Impact from "./components/Impact";
 import Active from "./components/Active";
 import Services from "./components/Services";
 import Listings from "./components/Listings";
+import Management from "./components/Management";
 import Highlights from "./components/Highlights";
 import Faq from "./components/Faq";
 import Reviews from "./components/Reviews";
@@ -64,6 +65,10 @@ export default function Home() {
 
         <section id="listings" className="py-20 bg-[#F9FAFB]">
           <Listings />
+        </section>
+
+        <section id="management" className="bg-[#F9FAFB] py-20">
+          <Management />
         </section>
 
         <section id="highlights" className="bg-[#F9FAFB] py-20">

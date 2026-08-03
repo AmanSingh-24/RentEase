@@ -6,16 +6,15 @@ type Stat = {
 };
 
 const STATS: Stat[] = [
-  { value: "$4.6M+", label: "Total Value" },
-  { value: "320+", label: "Active Homes" },
-  { value: "98%", label: "Happy Clients" },
+  { value: "460+", label: "Verified Properties" },
+  { value: "10+", label: "Active Homes" },
+  { value: "95%", label: "Happy Clients" },
 ];
 
 export default function Impact() {
   return (
     <section className="relative overflow-hidden bg-white py-24 sm:py-28">
-      {/* Faint decorative linework in the top-right corner — purely
-          ambient, tune/remove freely */}
+      {/* Faint decorative linework in the top-right corner */}
       <svg
         className="pointer-events-none absolute -right-24 -top-24 h-[420px] w-[420px] text-neutral-200/60"
         viewBox="0 0 400 400"
@@ -35,41 +34,41 @@ export default function Impact() {
             {/* Eyebrow */}
             <div className="flex items-center gap-2">
               <span className="flex h-4 w-4 items-center justify-center rounded-full border border-neutral-400">
-                <span className="h-1.5 w-1.5 rounded-full bg-neutral-400" />
+                <span className="h-1.5 w-1.5 rounded-full bg-neutral-900" />
               </span>
               <span className="text-sm font-medium uppercase tracking-wider text-neutral-500">
-                Our Impact
+                OUR IMPACT
               </span>
             </div>
 
             {/* Heading */}
             <h2 className="mt-5 text-5xl font-bold leading-[1.05] tracking-tight text-neutral-950 sm:text-6xl">
-              <span className="block">Real insights behind</span>
-              <span className="block">every property decision</span>
+              <span className="block">Everything You Need</span>
+              <span className="block">to Manage a Rental</span>
             </h2>
           </div>
 
           {/* Supporting copy */}
-          <p className="max-w-xs text-base text-neutral-500 sm:pt-2 sm:text-right sm:text-lg">
-            Built to make modern home discovery simple, transparent, and more
-            confident for every user.
+          <p className="max-w-xs text-base text-neutral-500 sm:pt-2 sm:text-right sm:text-md">
+            From discovering verified homes to managing payments, inspections, maintenance, and move-outs, RentEase simplifies every step of the rental journey.
           </p>
         </div>
 
         {/* Image / stats / image row */}
         <div className="mt-14 grid grid-cols-1 gap-4 lg:grid-cols-[1fr_2fr_1fr] lg:gap-4">
           {/* Left image */}
-          <div className="relative h-[320px] overflow-hidden rounded-2xl lg:h-auto">
+          <div className="relative h-[320px] overflow-hidden rounded-3xl lg:h-auto">
             <Image
               src="/impact-1.png"
               alt="Modern concrete and timber home exterior"
               fill
-              className="object-cover"
+              unoptimized
+              className="object-cover object-center"
             />
           </div>
 
           {/* Stats */}
-          <div className="flex flex-col overflow-hidden rounded-2xl bg-neutral-100">
+          <div className="flex flex-col overflow-hidden rounded-3xl bg-neutral-100">
             {STATS.map((stat, i) => (
               <div
                 key={stat.label}
@@ -80,7 +79,7 @@ export default function Impact() {
                 <span className="text-4xl font-bold tracking-tight text-neutral-950 sm:text-5xl">
                   {stat.value}
                 </span>
-                <span className="text-base font-medium uppercase tracking-wide text-neutral-800 sm:text-xl">
+                <span className="text-base font-semibold uppercase tracking-wide text-neutral-800 sm:text-xl">
                   {stat.label}
                 </span>
               </div>
@@ -88,12 +87,13 @@ export default function Impact() {
           </div>
 
           {/* Right image */}
-          <div className="relative h-[320px] overflow-hidden rounded-2xl lg:h-auto">
+          <div className="relative h-[320px] overflow-hidden rounded-3xl lg:h-auto">
             <Image
               src="/impact-2.png"
               alt="Modern hillside home exterior"
               fill
-              className="object-cover"
+              unoptimized
+              className="object-cover object-center"
             />
           </div>
         </div>

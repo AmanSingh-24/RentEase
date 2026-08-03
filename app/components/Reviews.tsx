@@ -25,36 +25,36 @@ const DEFAULT_ITEMS: ReviewItem[] = [
   {
     id: "1",
     quote:
-      "The layout was clean and thoughtfully designed. It helped me explore options clearly and move forward with confidence.",
+      "The digital inspection with timestamped photos made move-in incredibly smooth. Both my landlord and I had complete peace of mind.",
     name: "Sarah Anderson",
-    role: "First-time Buyer",
+    role: "Tenant",
     avatarSrc: "/peep-1.png",
     variant: "standard",
   },
   {
     id: "2",
     quote:
-      "I was able to find a home that matched my needs perfectly. The overall experience was smooth and very easy to follow.",
+      "Managing rent payments, maintenance requests, and documents from one dashboard has saved me hours every single month.",
     name: "Olivia Bennett",
-    role: "Interior Designer",
+    role: "Property Owner",
     avatarSrc: "/peep-2.png",
     variant: "standard",
   },
   {
     id: "3",
     quote:
-      "Clean interface and useful details helped me make better decisions. It made the whole process much easier to manage.",
+      "Verified listings and a transparent onboarding process gave me confidence before signing my rental agreement online.",
     name: "Liam Carter",
-    role: "Real Estate Investor",
+    role: "Tenant",
     avatarSrc: "/peep-3.png",
     variant: "standard",
   },
   {
     id: "4",
     quote:
-      "Every listing felt trustworthy and up to date. I never once felt like I was wasting time on a dead end.",
+      "RentEase transformed how I manage multiple properties. Everything from applications to inspections is finally organized in one place.",
     name: "Ethan Walker",
-    role: "Property Consultant",
+    role: "Property Owner",
     avatarSrc: "/main.png",
     photoSrc: "/main.png",
     variant: "photo",
@@ -62,18 +62,18 @@ const DEFAULT_ITEMS: ReviewItem[] = [
   {
     id: "5",
     quote:
-      "From search to move-in, everything felt guided. I'd recommend it to anyone starting a home search from scratch.",
+      "Maintenance issues are tracked from start to finish, and I always know what's happening without endless phone calls.",
     name: "Maya Torres",
-    role: "Relocation Specialist",
+    role: "Tenant",
     avatarSrc: "/peep-5.png",
     variant: "standard",
   },
   {
     id: "6",
     quote:
-      "Sharp design, zero friction. It's rare to find a home search experience that actually respects your time.",
+      "The platform makes renting feel professional. Payments, communication, and documents are all handled seamlessly in one ecosystem.",
     name: "Noah Ellison",
-    role: "Architect",
+    role: "Property Owner",
     avatarSrc: "/peep-6.png",
     variant: "standard",
   },
@@ -120,9 +120,9 @@ function PhotoCard({ item }: { item: ReviewItem }) {
 }
 
 export default function Reviews({
-  eyebrow = "CLIENT REVIEWS",
-  heading = "What people say about\ntheir home search",
-  description = "Real feedback from users who explored homes and found the right place with confidence.",
+eyebrow = "CLIENT REVIEWS",
+heading = "Built for better\nrenting experiences",
+description ="See how tenants and property owners use RentEase to simplify rentals, reduce disputes, and manage everything from one platform.",
   items = DEFAULT_ITEMS,
   fixedItemId,
   className = "",

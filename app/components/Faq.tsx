@@ -21,47 +21,53 @@ export interface FAQProps {
 
 const DEFAULT_ITEMS: FAQItem[] = [
   {
-    id: "start-searching",
-    question: "How do I start searching for a home?",
+    id: "verified-properties",
+    question: "Are all properties verified?",
     answer:
-      "You can browse available properties, apply filters, and explore listings based on your needs and location.",
+      "Yes. Every property listed on RentEase is reviewed before going live, helping tenants discover trusted rental homes with confidence.",
   },
   {
-    id: "filter-budget",
-    question: "Can I filter homes by budget & location?",
+    id: "book-visit",
+    question: "How do I book a property visit?",
     answer:
-      "Yes — use the filters panel to narrow listings by price range, city, neighborhood, and more.",
+      "Submit an inquiry with your contact details. The property owner is notified instantly and can approve your request to schedule a visit.",
   },
   {
-    id: "accurate-details",
-    question: "Are the property details accurate?",
+    id: "digital-onboarding",
+    question: "How does the rental onboarding work?",
     answer:
-      "Listings are verified and regularly updated by our team and partner agents to keep details accurate.",
+      "Once your request is approved, you'll complete a digital rental agreement, pay your security deposit and first month's rent, then move into your new home.",
   },
   {
-    id: "contact-owner",
-    question: "How do I contact a owner or agent?",
+    id: "digital-inspection",
+    question: "What is the digital inspection process?",
     answer:
-      "Open any listing and use the contact card to message the owner or agent directly from the platform.",
+      "Before using your dashboard, you'll upload room-by-room timestamped photos. The owner reviews them to create a transparent move-in record for both parties.",
   },
   {
-    id: "rent-or-buy",
-    question: "Can I explore rental and buying options",
+    id: "maintenance",
+    question: "Can I report maintenance issues?",
     answer:
-      "Absolutely — toggle between rent and buy at the top of the listings page to switch between both.",
+      "Absolutely. Raise maintenance requests directly from your dashboard, track their progress, and receive updates from your property owner.",
   },
   {
-    id: "account-needed",
-    question: "Do I need an account to use platform",
+    id: "payments",
+    question: "Can I manage rent payments online?",
     answer:
-      "You can browse freely without an account. Creating one lets you save favorites and contact owners.",
+      "Yes. Securely pay rent through the platform, access payment history, and track all your rental transactions in one place.",
   },
   {
-    id: "availability",
-    question: "How do I know if a property is available?",
+    id: "communication",
+    question: "Can tenants and owners chat on RentEase?",
     answer:
-      "Each listing shows a live availability status, updated as soon as a property is rented or sold.",
+      "Yes. Built-in messaging allows one-to-one conversations, while owners can also send important announcements to all their tenants.",
   },
+  {
+  id: "disputes",
+  question: "How does RentEase help prevent rental disputes?",
+  answer:
+    "Timestamped move-in inspections, digital agreements, payment records, and maintenance history provide a transparent record for both tenants and owners."
+},
 ];
 
 export default function FAQ({

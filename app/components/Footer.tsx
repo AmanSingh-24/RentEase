@@ -41,6 +41,7 @@ const DEFAULT_EXPLORE_LINKS: FooterNavLink[] = [
   { label: "Services", href: "#" },
   { label: "About", href: "#" },
   { label: "Contact Us", href: "#" },
+  { label: "Help Center ", href: "#" }
 ];
 
 /** Minimal inline X (Twitter) glyph — lucide doesn't ship the current logo. */
@@ -59,20 +60,19 @@ function XIcon({ size = 16 }: { size?: number }) {
 }
 
 export default function Footer({
-  badge = "Find your next home",
-  heading = "Discover homes designed\nfor your lifestyle",
-  description = "Explore properties, compare options, and move forward with confidence — everything you need in one place.",
+  badge = "The Future of Renting",
+  heading = "Everything you need\nfor modern renting",
+  description = "A seamless platform connecting tenants, landlords, and property owners for a smarter rental experience.",
   ctaLabel = "Get In Touch",
   ctaHref = "#contact",
   bgImageSrc = "/footer.png",
-  logoLabel = "Homy",
-  tagline = "Find, explore, and choose your next home with a simple and modern experience.",
+  logoLabel = "Rentease",
+  tagline = "India's complete rental management platform for tenants, landlords, and property owners.",
   exploreLinks = DEFAULT_EXPLORE_LINKS,
-  contactEmail = "homy@yourdomain.com",
-  contactPhone = "+123 456 000",
-  contactLocation = "New York, USA",
+  contactEmail = "rentease@yourdomain.com",
+  contactPhone = "+91 63625 14105",
+  contactLocation = "Bengaluru, Karnataka, India",
   copyrightText = "Copyright ©2026",
-  craftedByLabel = "Crafted by",
   privacyHref = "#",
   className = "",
 }: FooterProps) {
@@ -190,10 +190,6 @@ export default function Footer({
           <div className="border-t border-white/10">
             <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-6 py-5 text-xs text-white/50 md:flex-row md:justify-between md:px-10">
               <span>{copyrightText}</span>
-              <span className="flex items-center gap-1.5">
-                {craftedByLabel}
-                <span className="font-semibold text-white/70">Framer</span>
-              </span>
               <a href={privacyHref} className="transition-colors hover:text-white">
                 Privacy Policy
               </a>

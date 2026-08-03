@@ -1,4 +1,5 @@
 "use client";
+
 import { FcGoogle } from "react-icons/fc";
 import { useState } from "react";
 import { motion } from "framer-motion";
@@ -14,18 +15,12 @@ export default function LoginPage() {
   const redirectTo = searchParams.get("redirect");
 
   const [formData, setFormData] = useState({ email: "", password: "" });
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Everyone lands on / after login.
-  // The landing page's useEffect auto-redirects:
-  //   - Admin        → /admin/dashboard
-  //   - Owner with listings → /dashboard-owner
-  //   - Everyone else → stays on landing page
-  // The only exception: if ?redirect= is set (e.g. from "Apply for property" or "Rent Your Home")
   const getDestination = (user: any): string => {
     if (redirectTo) return redirectTo;
-    // Admin is the only one we fast-track because they should never see the landing page
     if (user.role === "admin") return "/admin/dashboard";
     return "/";
   };
@@ -83,116 +78,170 @@ export default function LoginPage() {
     }
   };
 
-  
   return (
     <div className="min-h-screen bg-white grid lg:grid-cols-2 overflow-hidden relative">
-      <div className="hidden lg:block relative">
-        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M 100 0 C 70 0, 80 20, 80 50 C 80 80, 70 100, 100 100 L 100 0 Z" fill="white" />
-          <path d="M 100 0 C 70 0, 80 20, 80 50 C 80 80, 70 100, 100 100 L 0 100 L 0 0 Z" fill="#0D9488" />
+      {/* Left Column: Image with curvy clip separation (image sits on the left,
+          so the curve bulges inward from the RIGHT edge of this column — mirror of signup) */}
+      <motion.div
+        initial={{ x: "-100%", opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        exit={{ x: "-100%", opacity: 0 }}
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        className="hidden lg:block relative w-full h-full min-h-screen"
+      >
+        {/* Hidden SVG holding the clip-path definition */}
+        <svg width="0" height="0" className="absolute">
+          <defs>
+            <clipPath id="loginCurve" clipPathUnits="objectBoundingBox">
+              <path d="M0.8,0 C0.92,0 0.8,0.2 0.8,0.5 C0.8,0.8 0.92,1 0.8,1 L0,1 L0,0 Z" />
+            </clipPath>
+          </defs>
         </svg>
 
-        <div className="relative z-10 flex items-center justify-center w-full h-full p-12">
-          <div className="absolute bottom-0 left-0 w-[90%] h-[70%]">
-            <Image src="/login.png" alt="RentEase Login Visual" fill className="object-contain object-left-bottom drop-shadow-2xl" priority />
-          </div>
-          <div className="relative w-full h-full">
-            <motion.div animate={{ y: [0, -15, 0] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }} className="absolute top-[30%] right-[20%] bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/20 shadow-2xl max-w-[220px]">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white text-xs">🔐</div>
-                <span className="font-bold text-white text-sm">Secure Access</span>
-              </div>
-              <p className="text-[10px] text-white/70 leading-relaxed">Your encrypted rental vault is protected with proof-based authentication.</p>
-            </motion.div>
-            <motion.div animate={{ y: [0, 15, 0] }} transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 1 }} className="absolute top-[1%] left-[25%] bg-white p-5 rounded-2xl shadow-2xl border border-gray-100 max-w-[200px]">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-2 h-2 rounded-full bg-[#0D9488]" />
-                <span className="font-bold text-[#1F2937] text-sm">System Ready</span>
-              </div>
-              <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
-                <motion.div initial={{ width: 0 }} animate={{ width: "100%" }} transition={{ duration: 2, delay: 0.5 }} className="h-full bg-[#0D9488]" />
-              </div>
-            </motion.div>
-          </div>
-          <div className="absolute top-0 left-0 w-96 h-96 bg-white/5 blur-[120px] rounded-full" />
+        <div
+          className="absolute inset-0"
+          style={{ clipPath: "url(#loginCurve)" }}
+        >
+          <Image
+            src="/login.png"
+            alt="RentEase Login Visual"
+            fill
+            className="object-cover"
+            priority
+          />
         </div>
-      </div>
+      </motion.div>
 
-      <div className="flex flex-col justify-center px-8 md:px-20 lg:px-32 py-12 relative z-30 bg-white">
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
-          <Link href="/">
-            <div className="relative w-[180px] h-[50px]">
-              <Image src="/desk.png" alt="RentEase Logo" fill className="object-contain object-left" priority />
-            </div>
-          </Link>
-        </motion.div>
-
-        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
-          <h1 className="text-4xl md:text-5xl font-bold text-[#1F2937] tracking-tight mb-4">Login</h1>
-          <p className="text-gray-500 text-lg mb-10">Access your RentEase vault with proof-based security.</p>
-        </motion.div>
-
-        <form className="space-y-6 max-w-md" onSubmit={handleLogin}>
-          <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-widest text-gray-400">Email Address</label>
-            <input 
-              required
-              type="email" 
-              placeholder="aman@example.com"
-              onChange={(e) => setFormData({...formData, email: e.target.value})}
-              className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/50 focus:bg-white focus:border-[#0D9488] focus:ring-4 focus:ring-[#0D9488]/5 outline-none transition-all text-[#1F2937]" 
-            />
+      {/* Right Column: Form Container */}
+      <motion.div
+        initial={{ x: "100%", opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        exit={{ x: "100%", opacity: 0 }}
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        className="flex flex-col justify-center px-8 sm:px-16 md:px-24 lg:px-20 xl:px-28 py-12 relative z-30 bg-white"
+      >
+        <div className="max-w-md w-full mx-auto">
+          {/* Logo */}
+          <div className="mb-8">
+            <Link href="/" className="inline-block">
+              <div className="relative w-44 h-12">
+                <Image
+                  src="/desk3.png"
+                  alt="RentEase Logo"
+                  fill
+                  className="object-contain object-left"
+                  priority
+                />
+              </div>
+            </Link>
           </div>
 
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <label className="text-xs font-bold uppercase tracking-widest text-gray-400">Password</label>
-              <Link href="#" className="text-[10px] font-bold text-[#0D9488] uppercase hover:underline">Forgot Password?</Link>
-            </div>
-            <input 
-              required
-              type="password" 
-              placeholder="••••••••"
-              onChange={(e) => setFormData({...formData, password: e.target.value})}
-              className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/50 focus:bg-white focus:border-[#0D9488] focus:ring-4 focus:ring-[#0D9488]/5 outline-none transition-all text-[#1F2937]" 
-            />
+          {/* Heading */}
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold text-neutral-900 mb-2">
+              Welcome back to RentEase! <br />
+              Please login to continue
+            </h1>
+            <p className="text-sm text-neutral-500 leading-relaxed">
+              Welcome back to our real estate application. Please enter your login credentials to access your account.
+            </p>
           </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-100 rounded-2xl">
-              <span className="text-red-500 text-lg">⚠</span>
-              <p className="text-sm text-red-600 font-medium">{error}</p>
+          {/* Form */}
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div>
+              <label className="block text-xs font-semibold text-neutral-600 mb-1.5">
+                Email
+              </label>
+              <input
+                required
+                type="email"
+                placeholder="anil@google.com"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="w-full px-4 py-3 rounded-xl border border-neutral-300 text-sm outline-none focus:border-black focus:ring-1 focus:ring-black transition-all text-neutral-900"
+              />
             </div>
-          )}
 
-          <button 
-            disabled={loading}
-            className="w-full bg-[#0D9488] text-white py-5 rounded-2xl font-bold text-lg shadow-xl shadow-teal-500/20 hover:scale-[1.02] active:scale-95 transition-all mt-4 disabled:opacity-50"
-          >
-            {loading ? "Signing in..." : "Sign In to Dashboard"}
-          </button>
-        </form>
+            <div>
+              <label className="block text-xs font-semibold text-neutral-600 mb-1.5">
+                Password
+              </label>
+              <input
+                required
+                type="password"
+                placeholder="••••••••••••"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                className="w-full px-4 py-3 rounded-xl border border-neutral-300 text-sm outline-none focus:border-black focus:ring-1 focus:ring-black transition-all text-neutral-900"
+              />
+            </div>
 
-        <div className="max-w-md mt-6">
-          <div className="relative flex items-center justify-center mb-6">
-            <div className="border-t border-gray-100 w-full"></div>
-            <span className="bg-white px-4 text-xs font-bold text-gray-400 uppercase tracking-widest absolute">Or</span>
+            {/* Remember Me & Forgot Password */}
+            <div className="flex items-center justify-between text-xs pt-1">
+              <label className="flex items-center gap-2 cursor-pointer text-neutral-700 font-medium select-none">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 rounded border-neutral-300 text-black focus:ring-black cursor-pointer"
+                />
+                Remember me
+              </label>
+              <Link href="#" className="font-semibold text-neutral-800 hover:underline">
+                Forgot password?
+              </Link>
+            </div>
+
+            {/* Error banner */}
+            {error && (
+              <div className="p-3.5 bg-red-50 border border-red-100 rounded-xl text-xs text-red-600 font-medium">
+                {error}
+              </div>
+            )}
+
+            {/* Submit Button (Black theme) */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3.5 bg-black hover:bg-neutral-800 text-white rounded-xl font-bold text-sm transition-colors shadow-md disabled:opacity-50 mt-2"
+            >
+              {loading ? "Signing In..." : "Sign In"}
+            </button>
+          </form>
+
+          {/* Social Divider */}
+          <div className="relative my-8 text-center">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-neutral-200" />
+            </div>
+            <span className="relative bg-white px-3 text-xs text-neutral-400 font-medium">
+              Or Login With
+            </span>
           </div>
 
-          <button 
+          {/* Google Sign-in with text */}
+          <button
             onClick={handleGoogleSignIn}
-            className="w-full bg-white border border-gray-100 text-[#1F2937] py-4 rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-gray-50 transition-all shadow-sm active:scale-95"
+            type="button"
+            className="w-full py-3.5 border border-neutral-300 rounded-xl font-bold text-sm text-neutral-800 flex items-center justify-center gap-3 hover:bg-neutral-50 transition-colors shadow-sm"
           >
-            <FcGoogle size={24} />
-            <span>Continue with Google</span>
+            <FcGoogle size={20} />
+            <span>Continue With Google</span>
           </button>
-        </div>
 
-        <p className="mt-10 text-gray-500">
-          Not a member yet? <Link href="/signup" className="text-[#0D9488] font-bold hover:underline">Create Account</Link>
-        </p>
-      </div>
+          {/* Bottom Switch Link */}
+          <p className="text-center text-xs text-neutral-500 mt-8">
+            If you don't have an account?{" "}
+            <Link
+              href={redirectTo ? `/signup?redirect=${encodeURIComponent(redirectTo)}` : "/signup"}
+              className="font-bold text-black hover:underline"
+            >
+              Register
+            </Link>
+          </p>
+        </div>
+      </motion.div>
     </div>
   );
 }

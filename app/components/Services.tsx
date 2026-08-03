@@ -28,32 +28,32 @@ export interface ServicesProps {
 
 const DEFAULT_ITEMS: ServiceItem[] = [
   {
-    id: "buy",
+    id: "find",
     index: ".01",
-    eyebrow: "Buy a Home",
-    title: "Find Homes Perfect For You",
+    eyebrow: "Find Your Home",
+    title: "Browse Verified Rentals Across Your City",
     image: "/services-1.png",
   },
   {
-    id: "rent",
+    id: "move",
     index: ".02",
-    eyebrow: "Rent a Home",
-    title: "Find Rental Homes With Ease",
+    eyebrow: "Move In Digitally",
+    title: "Sign Agreements, Pay & Complete Inspection",
     image: "/services-2.png",
   },
   {
-    id: "explore",
+    id: "manage",
     index: ".03",
-    eyebrow: "Explore Listings",
-    title: "Explore Available Properties Easily",
+    eyebrow: "Manage Everything",
+    title: "Track Payments, Requests & Your Entire Tenancy",
     image: "/services-3.png",
   },
 ];
 
 export default function Services({
-  eyebrow = "Our Services",
-  heading = "Everything you\nneed for your home",
-  description = "Built to simplify your home search with clear insights, better options, and confident decisions.",
+eyebrow = "Our Services",
+heading = "Everything you\nneed to rent smarter",
+description = "From finding verified homes to managing payments, inspections, maintenance, and communication—all in one platform.",
   items = DEFAULT_ITEMS,
   defaultActiveIndex = 0,
   className = "",
@@ -125,7 +125,7 @@ export default function Services({
                 </div>
                 <div>
                   <p className="text-sm text-neutral-500">{item.eyebrow}</p>
-                  <h3 className="mt-1 text-xl font-extrabold leading-snug text-neutral-950 md:text-2xl">
+                  <h3 className="mt-1 text-xl font-extrabold leading-snug text-neutral-950 md:text-xl">
                     {item.title}
                   </h3>
                 </div>

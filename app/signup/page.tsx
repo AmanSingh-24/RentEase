@@ -12,14 +12,12 @@ import { signInWithPopup } from "firebase/auth";
 export default function SignupPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirect"); // e.g. /onboarding/landlord
+  const redirectTo = searchParams.get("redirect");
 
   const [formData, setFormData] = useState({ name: "", email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Manual signup → account created, but NOT logged in yet.
-  // Send them to /login and carry the redirect param forward.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -32,7 +30,6 @@ export default function SignupPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        // Chain the redirect param to login so the full flow is preserved
         const loginUrl = redirectTo
           ? `/login?redirect=${encodeURIComponent(redirectTo)}`
           : "/login";
@@ -47,7 +44,6 @@ export default function SignupPage() {
     }
   };
 
-  // Google signup → immediately authenticated, go to redirect or landing page.
   const handleGoogleSignUp = async () => {
     setError("");
     try {
@@ -65,8 +61,6 @@ export default function SignupPage() {
       const data = await res.json();
 
       if (res.ok && data.user) {
-        // If came from "Rent Your Home" → go straight to listing form
-        // Otherwise → landing page (auto-redirect handles admin/owner routing)
         router.push(redirectTo || "/");
       } else {
         setError(data.error || "Google sign-up failed.");
@@ -79,139 +73,166 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen bg-white grid lg:grid-cols-2 overflow-hidden relative">
-      <div className="flex flex-col justify-center px-8 md:px-20 lg:px-32 py-12 relative z-30 bg-white">
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
-          <Link href="/">
-            <div className="relative w-[180px] h-[50px]">
-              <Image src="/desk.png" alt="RentEase Logo" fill className="object-contain object-left" priority />
+      {/* Left Column: Form */}
+      <motion.div
+        initial={{ x: "-100%", opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        exit={{ x: "-100%", opacity: 0 }}
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        className="flex flex-col justify-center px-8 sm:px-16 md:px-24 lg:px-20 xl:px-28 py-12 relative z-30 bg-white"
+      >
+        <div className="max-w-md w-full mx-auto">
+          {/* Logo */}
+          <div className="mb-8">
+            <Link href="/" className="inline-block">
+              <div className="relative w-44 h-12">
+                <Image
+                  src="/desk3.png"
+                  alt="RentEase Logo"
+                  fill
+                  className="object-contain object-left"
+                  priority
+                />
+              </div>
+            </Link>
+          </div>
+
+          {/* Heading */}
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold text-neutral-900 mb-2">
+              Create your RentEase account! <br />
+              Please register to continue
+            </h1>
+            <p className="text-sm text-neutral-500 leading-relaxed">
+              Welcome to our real estate application. Please enter your details to create your account.
+            </p>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-neutral-600 mb-1.5">
+                Full Name
+              </label>
+              <input
+                required
+                type="text"
+                placeholder="Anil Kumar"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full px-4 py-3 rounded-xl border border-neutral-300 text-sm outline-none focus:border-black focus:ring-1 focus:ring-black transition-all text-neutral-900"
+              />
             </div>
-          </Link>
-        </motion.div>
 
-        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
-          <h1 className="text-4xl md:text-5xl font-bold text-[#1F2937] tracking-tight mb-4">Sign Up</h1>
-          <p className="text-gray-500 text-lg mb-10">Secure your rental agreements with RentEase.</p>
-        </motion.div>
-
-        <form className="space-y-6 max-w-md" onSubmit={handleSubmit}>
-          <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-widest text-gray-400">Full Name</label>
-            <input 
-              required
-              type="text" 
-              placeholder="Aman Kumar Singh"
-              onChange={(e) => setFormData({...formData, name: e.target.value})}
-              className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/50 focus:bg-white focus:border-[#0052CC] focus:ring-4 focus:ring-[#0052CC]/5 outline-none transition-all text-[#1F2937]" 
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-widest text-gray-400">Email Address</label>
-            <input 
-              required
-              type="email" 
-              placeholder="aman@example.com"
-              onChange={(e) => setFormData({...formData, email: e.target.value})}
-              className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/50 focus:bg-white focus:border-[#0052CC] focus:ring-4 focus:ring-[#0052CC]/5 outline-none transition-all text-[#1F2937]" 
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-widest text-gray-400">Password</label>
-            <input 
-              required
-              type="password" 
-              placeholder="••••••••"
-              onChange={(e) => setFormData({...formData, password: e.target.value})}
-              className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/50 focus:bg-white focus:border-[#0052CC] focus:ring-4 focus:ring-[#0052CC]/5 outline-none transition-all text-[#1F2937]" 
-            />
-          </div>
-
-          {/* Inline error */}
-          {error && (
-            <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-100 rounded-2xl">
-              <span className="text-red-500 text-lg">⚠</span>
-              <p className="text-sm text-red-600 font-medium">{error}</p>
+            <div>
+              <label className="block text-xs font-semibold text-neutral-600 mb-1.5">
+                Email
+              </label>
+              <input
+                required
+                type="email"
+                placeholder="anil@google.com"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="w-full px-4 py-3 rounded-xl border border-neutral-300 text-sm outline-none focus:border-black focus:ring-1 focus:ring-black transition-all text-neutral-900"
+              />
             </div>
-          )}
 
-          <button 
-            disabled={loading}
-            className="w-full bg-[#0052CC] text-white py-5 rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/20 hover:scale-[1.02] active:scale-95 transition-all mt-4 disabled:opacity-50"
-          >
-            {loading ? "Creating Account..." : "Create Account"}
-          </button>
-        </form>
+            <div>
+              <label className="block text-xs font-semibold text-neutral-600 mb-1.5">
+                Password
+              </label>
+              <input
+                required
+                type="password"
+                placeholder="••••••••••••"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                className="w-full px-4 py-3 rounded-xl border border-neutral-300 text-sm outline-none focus:border-black focus:ring-1 focus:ring-black transition-all text-neutral-900"
+              />
+            </div>
 
-        <div className="max-w-md mt-6">
-          <div className="relative flex items-center justify-center mb-6">
-            <div className="border-t border-gray-100 w-full"></div>
-            <span className="bg-white px-4 text-xs font-bold text-gray-400 uppercase tracking-widest absolute">Or</span>
+            {/* Error banner */}
+            {error && (
+              <div className="p-3.5 bg-red-50 border border-red-100 rounded-xl text-xs text-red-600 font-medium">
+                {error}
+              </div>
+            )}
+
+            {/* Submit Button (Black theme) */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3.5 bg-black hover:bg-neutral-800 text-white rounded-xl font-bold text-sm transition-colors shadow-md disabled:opacity-50 mt-2"
+            >
+              {loading ? "Creating Account..." : "Register Account"}
+            </button>
+          </form>
+
+          {/* Social Divider */}
+          <div className="relative my-6 text-center">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-neutral-200" />
+            </div>
+            <span className="relative bg-white px-3 text-xs text-neutral-400 font-medium">
+              Or Register With
+            </span>
           </div>
 
-          <button 
+          {/* Google Sign-in with text */}
+          <button
             onClick={handleGoogleSignUp}
-            className="w-full bg-white border border-gray-100 text-[#1F2937] py-4 rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-gray-50 transition-all shadow-sm active:scale-95"
+            type="button"
+            className="w-full py-3.5 border border-neutral-300 rounded-xl font-bold text-sm text-neutral-800 flex items-center justify-center gap-3 hover:bg-neutral-50 transition-colors shadow-sm"
           >
-            <FcGoogle size={24} />
-            <span>Continue with Google</span>
+            <FcGoogle size={20} />
+            <span>Continue With Google</span>
           </button>
+
+          {/* Bottom Switch Link */}
+          <p className="text-center text-xs text-neutral-500 mt-6">
+            Already have an account?{" "}
+            <Link
+              href={redirectTo ? `/login?redirect=${encodeURIComponent(redirectTo)}` : "/login"}
+              className="font-bold text-black hover:underline"
+            >
+              Sign In
+            </Link>
+          </p>
         </div>
+      </motion.div>
 
-        <p className="mt-10 text-gray-500">
-          Already a member?{" "}
-          <Link
-            href={redirectTo ? `/login?redirect=${encodeURIComponent(redirectTo)}` : "/login"}
-            className="text-[#0052CC] font-bold hover:underline"
-          >
-            Sign In
-          </Link>
-        </p>
-      </div>
-
-      <div className="hidden lg:block relative">
-        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M 0 0 C 30 0, 20 20, 20 50 C 20 80, 30 100, 0 100 L 0 0 Z" fill="white" />
-          <path d="M 0 0 C 30 0, 20 20, 20 50 C 20 80, 30 100, 0 100 L 100 100 L 100 0 Z" fill="#0052CC" />
+      {/* Right Column: Image with curvy clip separation (image sits on the right,
+          so the curve bulges inward from the LEFT edge of this column) */}
+      <motion.div
+        initial={{ x: "100%", opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        exit={{ x: "100%", opacity: 0 }}
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        className="hidden lg:block relative w-full h-full min-h-screen"
+      >
+        {/* Hidden SVG holding the clip-path definition */}
+        <svg width="0" height="0" className="absolute">
+          <defs>
+            <clipPath id="signupCurve" clipPathUnits="objectBoundingBox">
+              <path d="M0.2,0 C0.08,0 0.2,0.2 0.2,0.5 C0.2,0.8 0.08,1 0.2,1 L1,1 L1,0 Z" />
+            </clipPath>
+          </defs>
         </svg>
 
-        <div className="relative z-10 flex items-center justify-center w-full h-full p-12">
-          <div className="absolute bottom-0 right-0 w-[90%] h-[70%]">
-            <Image src="/signup.png" alt="Join RentEase" fill className="object-contain object-right-bottom drop-shadow-2xl" priority />
-          </div>
-
-          <div className="relative w-full h-full">
-            <motion.div animate={{ y: [0, -15, 0] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }} className="absolute top-[30%] left-[20%] bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/20 shadow-2xl max-w-[220px]">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white text-xs">🔒</div>
-                <span className="font-bold text-white text-sm">Encrypted Evidence</span>
-              </div>
-              <p className="text-[10px] text-white/70 leading-relaxed">Every photo is cryptographically verified to ensure zero tampering.</p>
-            </motion.div>
-
-            <motion.div animate={{ y: [0, 15, 0] }} transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 1 }} className="absolute top-[1%] right-[25%] bg-white p-5 rounded-2xl shadow-2xl border border-gray-100 max-w-[200px]">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-2 h-2 rounded-full bg-[#0D9488]" />
-                <span className="font-bold text-[#1F2937] text-sm">Verified State</span>
-              </div>
-              <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
-                <motion.div initial={{ width: 0 }} animate={{ width: "100%" }} transition={{ duration: 2, delay: 0.5 }} className="h-full bg-[#0D9488]" />
-              </div>
-            </motion.div>
-
-            <motion.div animate={{ x: [0, 10, 0] }} transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }} className="absolute top-[25%] right-[0%] bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20 shadow-2xl">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl">✅</div>
-                <div>
-                  <p className="text-[10px] font-bold text-white uppercase tracking-widest">Status</p>
-                  <p className="text-xs font-bold text-white">Digital Witness Active</p>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-          <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 blur-[120px] rounded-full" />
+        <div
+          className="absolute inset-0"
+          style={{ clipPath: "url(#signupCurve)" }}
+        >
+          <Image
+            src="/signup.png"
+            alt="RentEase Signup Visual"
+            fill
+            className="object-cover"
+            priority
+          />
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

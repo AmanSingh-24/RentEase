@@ -3,16 +3,22 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
   MapPin,
   Home,
   ShieldCheck,
-  IndianRupee,
   ChevronLeft,
   ChevronRight,
   X,
   CheckCircle,
   Loader2,
+  BedDouble,
+  Bath,
+  Layers,
+  Building,
+  PawPrint,
+  ArrowRight,
 } from "lucide-react";
 import Navbar from "../../components/Navbar";
 import FAQ from "../../components/Faq";
@@ -73,7 +79,6 @@ export default function PropertyDetailPage() {
           setCurrentUser(data.user || null);
           if (data.user) {
             setFormData((prev) => ({ ...prev, name: data.user.name || "", email: data.user.email || "" }));
-            // Check if this user already has a booking for this property
             if (id) {
               const bRes = await fetch(`/api/bookings/status?propertyId=${id}`);
               const bData = await bRes.json();
@@ -101,56 +106,68 @@ export default function PropertyDetailPage() {
   };
 
   const handleSubmitBooking = async () => {
-    if (!formData.name || !formData.phone || !formData.email) {
-      setError("Name, phone and email are all required.");
+    if (!formData.name.trim() || !formData.phone.trim() || !formData.email.trim()) {
+      setError("Please fill in all fields.");
       return;
     }
     setSubmitting(true);
     setError("");
+
     try {
       const res = await fetch("/api/bookings/request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ propertyId: id, ...formData }),
+        body: JSON.stringify({
+          propertyId: property._id,
+          phone: formData.phone,
+        }),
       });
+
       const data = await res.json();
+
       if (res.ok) {
         setSubmitted(true);
         setExistingBooking({ status: "pending" });
       } else {
-        setError(data.error || "Failed to submit booking.");
+        setError(data.error || "Failed to submit booking request.");
       }
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError("Network error. Please try again.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Determine button state based on existing booking
-  const bookingStatus = existingBooking?.status;
-  const isBooked = bookingStatus === "pending" || bookingStatus === "pending_payment";
-  const isRejected = bookingStatus === "rejected";
+  const isBooked = existingBooking && existingBooking.status !== "rejected";
+  const isRejected = existingBooking && existingBooking.status === "rejected";
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F9FAFB] flex items-center justify-center">
-        <Loader2 className="animate-spin text-[#0052CC]" size={40} />
+      <div className="min-h-screen bg-white flex flex-col justify-between">
+        <Navbar />
+        <div className="flex-1 flex items-center justify-center pt-24">
+          <Loader2 size={36} className="animate-spin text-black" />
+        </div>
+        <Footer />
       </div>
     );
   }
 
   if (!property) {
     return (
-      <div className="min-h-screen bg-[#F9FAFB] flex flex-col items-center justify-center gap-4">
-        <Home size={48} className="text-gray-300" />
-        <h1 className="text-2xl font-bold text-gray-600">Property not found</h1>
-        <p className="text-gray-400">This listing may have been removed or is no longer available.</p>
-        <Link href="/properties">
-          <button className="px-6 py-3 bg-[#0052CC] text-white rounded-xl font-bold text-sm mt-4">
-            ← Back to Listings
-          </button>
-        </Link>
+      <div className="min-h-screen bg-white flex flex-col justify-between">
+        <Navbar />
+        <div className="flex-1 flex flex-col items-center justify-center text-center px-4 pt-24">
+          <Home size={56} className="text-gray-300 mb-4" />
+          <h2 className="text-2xl font-bold text-gray-700 mb-2">Property Not Found</h2>
+          <p className="text-gray-400 max-w-sm">This listing may have been removed or is no longer available.</p>
+          <Link href="/properties">
+            <button className="px-6 py-3 bg-black text-white rounded-full font-semibold text-sm mt-6">
+              ← Back to Listings
+            </button>
+          </Link>
+        </div>
+        <Footer />
       </div>
     );
   }
@@ -159,128 +176,153 @@ export default function PropertyDetailPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* ── Navbar ─────────────────────────────────────────────────────────── */}
+      {/* Navbar */}
       <Navbar />
 
-      {/* Back button sub-bar */}
-      <div className="pt-24 pb-2 bg-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-2 flex items-center">
-          <Link href="/properties" className="flex items-center gap-2 text-gray-500 hover:text-[#1F2937] font-bold text-sm transition-colors">
-            <ChevronLeft size={18} /> Back to Listings
-          </Link>
-        </div>
-      </div>
-
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* ── Left Column: Images + Details ───────────────────────────────── */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Image Carousel */}
-            <div className="relative bg-gray-200 rounded-2xl overflow-hidden h-72 md:h-96">
-              {images.length > 0 ? (
-                <>
-                  <img
-                    src={images[imageIndex]}
-                    alt={`Property image ${imageIndex + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                  {images.length > 1 && (
-                    <>
-                      <button
-                        onClick={() => setImageIndex((i) => (i - 1 + images.length) % images.length)}
-                        className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 text-white rounded-full flex items-center justify-center hover:bg-black/70 transition-colors"
-                      >
-                        <ChevronLeft size={20} />
-                      </button>
-                      <button
-                        onClick={() => setImageIndex((i) => (i + 1) % images.length)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 text-white rounded-full flex items-center justify-center hover:bg-black/70 transition-colors"
-                      >
-                        <ChevronRight size={20} />
-                      </button>
-                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
-                        {images.map((_: string, i: number) => (
-                          <button
-                            key={i}
-                            onClick={() => setImageIndex(i)}
-                            className={`w-2 h-2 rounded-full transition-colors ${i === imageIndex ? "bg-white" : "bg-white/40"}`}
-                          />
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </>
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
-                  <Home size={48} />
-                  <p className="text-sm mt-2">No photos available</p>
-                </div>
-              )}
-
-              {/* Thumbnail Strip */}
-              {images.length > 1 && (
-                <div className="absolute bottom-0 left-0 right-0" />
-              )}
+      {/* Main container */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-40 pb-16">
+        
+        {/* Top Header: Badge + Title + Location + Price */}
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between mb-6 gap-4">
+          <div>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-100 text-neutral-600 text-xs font-semibold mb-3">
+              <Home size={12} /> For Rent
             </div>
+            <h1 className="text-3xl md:text-5xl font-extrabold text-black tracking-tight">{property.address}</h1>
+            <p className="text-sm md:text-base text-neutral-500 flex items-center gap-1.5 mt-2">
+              <MapPin size={16} className="text-neutral-400" />
+              {property.city}{property.state ? `, ${property.state}` : ""}{property.pincode ? ` — ${property.pincode}` : ""}
+            </p>
+          </div>
+          <div className="text-left md:text-right">
+            <p className="text-3xl md:text-5xl font-black text-black">
+              ₹{Number(property.rentAmount).toLocaleString("en-IN")}
+              <span className="text-sm font-semibold text-neutral-400">/mo</span>
+            </p>
+          </div>
+        </div>
 
-            {/* Thumbnail Strip */}
-            {images.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {images.map((img: string, i: number) => (
-                  <button
-                    key={i}
-                    onClick={() => setImageIndex(i)}
-                    className={`flex-shrink-0 w-20 h-16 rounded-xl overflow-hidden border-2 transition-all ${
-                      i === imageIndex ? "border-[#0052CC] scale-105" : "border-transparent"
-                    }`}
-                  >
-                    <img src={img} alt={`Thumb ${i + 1}`} className="w-full h-full object-cover" />
-                  </button>
-                ))}
+        {/* Hero Grid Showcase (Grid layout inspired by screenshot) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
+          {/* Main Large Image */}
+          <div className="md:col-span-2 relative h-72 md:h-[450px] rounded-3xl overflow-hidden bg-neutral-100 group">
+            {images.length > 0 ? (
+              <img
+                src={images[imageIndex]}
+                alt={`Property view ${imageIndex + 1}`}
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center text-neutral-300">
+                <Home size={48} />
+                <p className="text-xs mt-2">No photos available</p>
               </div>
             )}
+            {images.length > 1 && (
+              <>
+                <button
+                  onClick={() => setImageIndex((i) => (i - 1 + images.length) % images.length)}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 text-white rounded-full flex items-center justify-center hover:bg-black/70 transition-colors"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+                <button
+                  onClick={() => setImageIndex((i) => (i + 1) % images.length)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 text-white rounded-full flex items-center justify-center hover:bg-black/70 transition-colors"
+                >
+                  <ChevronRight size={20} />
+                </button>
+              </>
+            )}
+          </div>
 
-            {/* Property Title & Location */}
-            <div className="bg-white rounded-2xl p-6 border border-gray-100">
-              <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="bg-blue-50 text-[#0052CC] text-xs font-black px-3 py-1 rounded-full">
-                      {property.bhk} BHK
-                    </span>
-                    <span className={`text-xs font-bold px-3 py-1 rounded-full ${
-                      property.furnishing === "fully_furnished" ? "bg-teal-50 text-teal-700" :
-                      property.furnishing === "semi_furnished" ? "bg-blue-50 text-blue-600" :
-                      "bg-gray-100 text-gray-600"
-                    }`}>
-                      {FURNISHING_LABELS[property.furnishing] || "Unfurnished"}
-                    </span>
-                  </div>
-                  <h1 className="text-2xl font-black text-[#1F2937]">{property.address}</h1>
-                  <p className="text-gray-500 flex items-center gap-1.5 mt-1">
-                    <MapPin size={14} />
-                    {property.city}{property.state ? `, ${property.state}` : ""}{property.pincode ? ` — ${property.pincode}` : ""}
-                  </p>
-                </div>
-              </div>
-
-              {/* Description */}
-              {property.description && (
-                <div className="mt-4 pt-4 border-t border-gray-50">
-                  <h3 className="font-black text-[#1F2937] mb-2 text-sm uppercase tracking-wide">About This Property</h3>
-                  <p className="text-gray-600 text-sm leading-relaxed">{property.description}</p>
-                </div>
+          {/* Right Two Smaller Images Stack */}
+          <div className="hidden md:flex flex-col gap-4 h-[450px]">
+            <div className="flex-1 relative rounded-3xl overflow-hidden bg-neutral-100 cursor-pointer" onClick={() => setImageIndex(1 % images.length)}>
+              {images.length > 1 ? (
+                <img src={images[1 % images.length]} alt="Sub detail 1" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+              ) : (
+                <div className="w-full h-full bg-neutral-100 flex items-center justify-center text-neutral-300"><Home size={32} /></div>
               )}
             </div>
+            <div className="flex-1 relative rounded-3xl overflow-hidden bg-neutral-100 cursor-pointer" onClick={() => setImageIndex(2 % images.length)}>
+              {images.length > 2 ? (
+                <img src={images[2 % images.length]} alt="Sub detail 2" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+              ) : (
+                <div className="w-full h-full bg-neutral-100 flex items-center justify-center text-neutral-300"><Home size={32} /></div>
+              )}
+            </div>
+          </div>
+        </div>
 
-            {/* Amenities */}
+        {/* Content Layout: Left details + Right sticky black widget */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+          
+          {/* Left Column (8 cols): Description, Specs table, Amenities */}
+          <div className="lg:col-span-7 space-y-10">
+            
+            {/* Description */}
+            <div>
+              <h2 className="text-2xl font-extrabold text-black mb-4">Description</h2>
+              <p className="text-neutral-600 leading-relaxed text-base">
+                {property.description || `${property.address} is a beautifully maintained rental unit located in ${property.city}. It offers peaceful living with convenient access to local amenities and transportation.`}
+              </p>
+            </div>
+
+            {/* Specifications Table (UI matching screenshot specs table) */}
+            <div className="bg-neutral-50 rounded-3xl p-6 md:p-8 space-y-4">
+              <div className="flex items-center justify-between py-3 border-b border-neutral-200/60">
+                <span className="flex items-center gap-3 text-neutral-700 font-semibold text-sm">
+                  <BedDouble size={18} className="text-black" /> Bedrooms
+                </span>
+                <span className="font-extrabold text-black text-sm">{property.bhk} BHK</span>
+              </div>
+
+              <div className="flex items-center justify-between py-3 border-b border-neutral-200/60">
+                <span className="flex items-center gap-3 text-neutral-700 font-semibold text-sm">
+                  <Home size={18} className="text-black" /> Furnishing Status
+                </span>
+                <span className="font-extrabold text-black text-sm">{FURNISHING_LABELS[property.furnishing] || "Unfurnished"}</span>
+              </div>
+
+              {property.propertyType && (
+                <div className="flex items-center justify-between py-3 border-b border-neutral-200/60">
+                  <span className="flex items-center gap-3 text-neutral-700 font-semibold text-sm">
+                    <Building size={18} className="text-black" /> Property Type
+                  </span>
+                  <span className="font-extrabold text-black text-sm capitalize">{property.propertyType}</span>
+                </div>
+              )}
+
+              {property.floorNumber != null && (
+                <div className="flex items-center justify-between py-3 border-b border-neutral-200/60">
+                  <span className="flex items-center gap-3 text-neutral-700 font-semibold text-sm">
+                    <Layers size={18} className="text-black" /> Floor Number
+                  </span>
+                  <span className="font-extrabold text-black text-sm">
+                    Floor {property.floorNumber} {property.totalFloors ? `of ${property.totalFloors}` : ""}
+                  </span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between py-3">
+                <span className="flex items-center gap-3 text-neutral-700 font-semibold text-sm">
+                  <PawPrint size={18} className="text-black" /> Pet Policy
+                </span>
+                <span className="font-extrabold text-black text-sm">
+                  {property.petsAllowed ? "Pets Allowed 🐾" : "No Pets"}
+                </span>
+              </div>
+            </div>
+
+            {/* Amenities & Features */}
             {property.amenities?.length > 0 && (
-              <div className="bg-white rounded-2xl p-6 border border-gray-100">
-                <h3 className="font-black text-[#1F2937] mb-4 text-sm uppercase tracking-wide">Amenities</h3>
-                <div className="flex flex-wrap gap-2">
+              <div>
+                <h2 className="text-2xl font-extrabold text-black mb-4">Amenities & Features</h2>
+                <div className="flex flex-wrap gap-2.5">
                   {property.amenities.map((amenity: string) => (
-                    <span key={amenity} className="flex items-center gap-1.5 text-sm font-medium text-gray-600 bg-gray-50 px-3 py-2 rounded-xl">
-                      <CheckCircle size={14} className="text-[#10B981]" /> {amenity}
+                    <span key={amenity} className="px-4 py-2.5 bg-neutral-100 rounded-2xl text-sm font-semibold text-neutral-700">
+                      {amenity}
                     </span>
                   ))}
                 </div>
@@ -288,219 +330,151 @@ export default function PropertyDetailPage() {
             )}
           </div>
 
-          {/* ── Right Column: Pricing + Apply ───────────────────────────────── */}
-          <div className="space-y-4">
-            {/* Pricing Card */}
-            <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-              <div className="mb-4">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Monthly Rent</p>
-                <p className="text-4xl font-black text-[#1F2937]">
-                  ₹{Number(property.rentAmount).toLocaleString("en-IN")}
-                </p>
+          {/* Right Column (5 cols): Sticky Black Card matching Screenshot */}
+          <div className="lg:col-span-5 lg:sticky lg:top-28">
+            <div className="bg-black text-white rounded-3xl p-8 md:p-10 shadow-2xl flex flex-col items-center text-center">
+              
+              {/* RentEase Logo */}
+              <div className="relative w-40 h-10 mb-6">
+                <Image src="/desk3.png" alt="RentEase" fill className="object-contain invert" priority />
               </div>
-              <div className="py-4 border-t border-b border-gray-50 mb-4 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Security Deposit</span>
-                  <span className="font-bold text-[#1F2937]">
-                    ₹{Number(property.depositAmount || 0).toLocaleString("en-IN")}
-                  </span>
+
+              {/* Title & Description */}
+              <h3 className="text-2xl md:text-3xl font-extrabold tracking-tight mb-3">Like this property?</h3>
+              <p className="text-neutral-400 text-xs md:text-sm leading-relaxed mb-6 max-w-xs">
+                We'd love to help you explore this home. Reach out to get more details or book a visit directly with the owner.
+              </p>
+
+              {/* Feature Pill Items */}
+              <div className="w-full space-y-3 mb-8">
+                <div className="w-full py-3 px-4 bg-neutral-900 rounded-2xl text-sm font-bold text-neutral-200 border border-neutral-800 flex items-center justify-center gap-2">
+                  <ShieldCheck size={16} className="text-emerald-400" /> Verified Property Listing
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Property Type</span>
-                  <span className="font-bold text-[#1F2937]">{property.bhk} BHK</span>
+                <div className="w-full py-3 px-4 bg-neutral-900 rounded-2xl text-sm font-bold text-neutral-200 border border-neutral-800 flex items-center justify-center gap-2">
+                  <CheckCircle size={16} className="text-blue-400" /> Quality Living Spaces
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Furnishing</span>
-                  <span className="font-bold text-[#1F2937]">
-                    {FURNISHING_LABELS[property.furnishing] || "—"}
-                  </span>
+                <div className="w-full py-3 px-4 bg-neutral-900 rounded-2xl text-sm font-bold text-neutral-200 border border-neutral-800 flex items-center justify-center gap-2">
+                  <Home size={16} className="text-amber-400" /> Smart Real Estate Choice
                 </div>
               </div>
 
-              {error && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl">
-                  {error}
-                </div>
-              )}
-
-              {/* Smart Book / Requested button */}
+              {/* Action Button */}
               {isBooked ? (
                 <button
                   disabled
-                  className="w-full py-4 bg-gray-100 text-gray-400 rounded-xl font-black text-sm cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full py-4 bg-neutral-800 text-emerald-400 rounded-full font-bold text-sm cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  <CheckCircle size={16} className="text-[#10B981]" /> Requested
+                  <CheckCircle size={18} /> Contact Requested
                 </button>
               ) : (
                 <button
                   onClick={handleBookClick}
-                  className="w-full py-4 bg-[#0052CC] text-white rounded-xl font-black text-sm hover:bg-[#0041a3] transition-colors shadow-lg shadow-blue-200"
+                  className="w-full py-4 bg-white text-black hover:bg-neutral-100 transition-colors rounded-full font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg"
                 >
-                  {!currentUser ? "Sign Up to Book" : "Book the Property"}
+                  Book the Property <ArrowRight size={16} />
                 </button>
               )}
 
               {isBooked && (
-                <p className="text-[10px] text-[#10B981] text-center mt-2 font-bold">
-                  ✓ Your contact details have been sent to the owner. They will reach out soon.
+                <p className="text-xs text-emerald-400 mt-3 font-semibold">
+                  ✓ Your contact details have been sent to the owner.
                 </p>
               )}
-              {isRejected && (
-                <p className="text-[10px] text-gray-400 text-center mt-2">
-                  Your previous request was not selected. You may book again.
-                </p>
-              )}
-            </div>
-
-            {/* Verified Landlord Card */}
-            <div className="bg-white rounded-2xl p-6 border border-gray-100">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-[#0052CC]/10 rounded-xl flex items-center justify-center">
-                  <ShieldCheck size={24} className="text-[#0052CC]" />
-                </div>
-                <div>
-                  <p className="font-black text-[#1F2937] text-sm">Verified Landlord ✓</p>
-                  <p className="text-xs text-gray-400">
-                    {property.ownerId?.name || "Verified Owner"}
-                  </p>
-                </div>
-              </div>
-              <div className="mt-4 p-3 bg-green-50 rounded-xl">
-                <p className="text-xs text-green-700 font-medium">
-                  🔒 This landlord's identity and property ownership have been verified by RentEase Admin. Contact info is protected — communicate through the platform after applying.
-                </p>
-              </div>
-            </div>
-
-            {/* Financial Summary */}
-            <div className="bg-[#1F2937] rounded-2xl p-6 text-white">
-              <h3 className="font-black mb-4 text-sm uppercase tracking-wide flex items-center gap-2">
-                <IndianRupee size={16} /> Move-in Cost
-              </h3>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">First Month Rent</span>
-                  <span className="font-bold">₹{Number(property.rentAmount).toLocaleString("en-IN")}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Security Deposit</span>
-                  <span className="font-bold">₹{Number(property.depositAmount || 0).toLocaleString("en-IN")}</span>
-                </div>
-                <div className="border-t border-white/10 pt-2 flex justify-between">
-                  <span className="font-black text-white">Total Move-in</span>
-                  <span className="font-black text-[#10B981]">
-                    ₹{(Number(property.rentAmount) + Number(property.depositAmount || 0)).toLocaleString("en-IN")}
-                  </span>
-                </div>
-              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── Book the Property Modal ────────────────────────────────────────── */}
+      {/* Booking Contact Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl relative">
-            <div className="p-6 md:p-8">
-              {/* Modal Header */}
-              <div className="flex items-start justify-between mb-6">
-                <div>
-                  <h2 className="text-xl font-black text-[#1F2937]">Book the Property</h2>
-                  <p className="text-sm text-gray-400 mt-1">{property.address}</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full relative shadow-2xl">
+            <button
+              onClick={() => { setShowModal(false); setSubmitted(false); setError(""); }}
+              className="absolute top-5 right-5 text-neutral-400 hover:text-black"
+            >
+              <X size={20} />
+            </button>
+
+            {submitted ? (
+              <div className="text-center py-6">
+                <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-emerald-200">
+                  <CheckCircle size={32} className="text-emerald-500" />
                 </div>
+                <h3 className="text-2xl font-black text-black mb-2">Request Sent!</h3>
+                <p className="text-neutral-500 text-sm mb-6">
+                  Your contact information has been shared with the property owner. They will reach out to schedule a visit.
+                </p>
                 <button
-                  onClick={() => { setShowModal(false); setSubmitted(false); setError(""); }}
-                  className="text-gray-400 hover:text-black transition-colors p-1"
+                  onClick={() => setShowModal(false)}
+                  className="w-full py-3.5 bg-black text-white rounded-full font-bold text-sm"
                 >
-                  <X size={22} />
+                  Done
                 </button>
               </div>
+            ) : (
+              <div>
+                <h3 className="text-2xl font-extrabold text-black mb-1">Book a Visit</h3>
+                <p className="text-xs text-neutral-400 mb-6">Share your details to connect with the owner directly.</p>
 
-              {submitted ? (
-                /* Success Modal */
-                <div className="text-center py-6">
-                  <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <CheckCircle size={40} className="text-[#10B981]" />
-                  </div>
-                  <h3 className="text-xl font-black text-[#1F2937] mb-3">Request Sent!</h3>
-                  <p className="text-gray-500 text-sm mb-6 leading-relaxed">
-                    Your contact details have been sent to the owner. They will contact you soon through mail, WhatsApp, or phone call.
-                  </p>
-                  <button
-                    onClick={() => { setShowModal(false); setSubmitted(false); }}
-                    className="w-full py-3 bg-[#0052CC] text-white rounded-xl font-black text-sm hover:bg-[#0041a3] transition-colors"
-                  >
-                    OK
-                  </button>
-                </div>
-              ) : (
-                /* Booking Form */
                 <div className="space-y-4">
                   <div>
-                    <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-1">Full Name *</label>
+                    <label className="text-xs font-bold text-neutral-700 block mb-1">Full Name</label>
                     <input
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       placeholder="Your full name"
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#0052CC] mt-1"
+                      className="w-full px-4 py-3 border border-neutral-200 rounded-xl text-sm outline-none focus:border-black"
                     />
                   </div>
                   <div>
-                    <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-1">Phone Number *</label>
+                    <label className="text-xs font-bold text-neutral-700 block mb-1">Phone Number</label>
                     <input
                       type="tel"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                       placeholder="+91 XXXXX XXXXX"
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#0052CC] mt-1"
+                      className="w-full px-4 py-3 border border-neutral-200 rounded-xl text-sm outline-none focus:border-black"
                     />
                   </div>
                   <div>
-                    <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-1">Email *</label>
+                    <label className="text-xs font-bold text-neutral-700 block mb-1">Email</label>
                     <input
                       type="email"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       placeholder="you@example.com"
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#0052CC] mt-1"
+                      className="w-full px-4 py-3 border border-neutral-200 rounded-xl text-sm outline-none focus:border-black"
                     />
                   </div>
 
                   {error && (
-                    <div className="p-3 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl">
+                    <div className="p-3 bg-red-50 border border-red-100 text-red-600 text-xs rounded-xl">
                       {error}
                     </div>
                   )}
 
-                  <div className="bg-blue-50 rounded-xl p-3">
-                    <p className="text-xs text-[#0052CC] font-medium">
-                      📞 The owner will contact you via call, WhatsApp, or email to discuss further details and schedule a visit.
-                    </p>
-                  </div>
-
                   <button
                     onClick={handleSubmitBooking}
                     disabled={submitting}
-                    className="w-full py-4 bg-[#0052CC] text-white rounded-xl font-black text-sm hover:bg-[#0041a3] transition-colors shadow-lg shadow-blue-200 disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="w-full py-4 bg-black text-white rounded-full font-extrabold text-sm hover:bg-neutral-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 mt-2"
                   >
                     {submitting && <Loader2 size={16} className="animate-spin" />}
-                    {submitting ? "Sending..." : "Send My Contact Details"}
+                    {submitting ? "Sending..." : "Send Contact Details"}
                   </button>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* ── FAQ Section ──────────────────────────────────────────────────────── */}
+      {/* FAQ Section */}
       <FAQ />
 
-      {/* ── Footer ───────────────────────────────────────────────────────────── */}
+      {/* Footer Section */}
       <Footer />
     </div>
   );
 }
-
