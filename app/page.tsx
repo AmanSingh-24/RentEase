@@ -55,31 +55,31 @@ export default function Home() {
 </section>
 
 
-        <section id="active" className="py-20 bg-[#F9FAFB]">
+        <section id="active">
           <Active />
         </section>
 
-        <section id="services" className="bg-[#F9FAFB] py-20">
+        <section id="services">
           <Services />
         </section>
 
-        <section id="listings" className="py-20 bg-[#F9FAFB]">
+        <section id="listings">
           <Listings />
         </section>
 
-        <section id="management" className="bg-[#F9FAFB] py-20">
+        <section id="management">
           <Management />
         </section>
 
-        <section id="highlights" className="bg-[#F9FAFB] py-20">
+        <section id="highlights">
           <Highlights videoSrc="/video.mp4" posterSrc="/poster.png" />
         </section>
          
-         <section id="faq" className="py-20 bg-[#F9FAFB]">
+         <section id="faq" className = "pt-25">
           <Faq />
         </section>
 
-        <section id="about" className="bg-[#F9FAFB] py-10">
+        <section id="about">
           <Reviews />
         </section>
 

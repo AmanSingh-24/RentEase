@@ -45,11 +45,14 @@ export async function POST(request: Request) {
       address, 
       rentAmount, 
       depositAmount, 
-      templateType, // ✅ NEW: '1BHK', '2BHK', or 'Villa'
+      templateType,
       maintenanceRules, 
       exitPolicy,
       guidelines, 
-      images 
+      images,
+      latitude,
+      longitude,
+      formattedAddress,
     } = body;
 
     // 1. Validate Template
@@ -86,17 +89,27 @@ export async function POST(request: Request) {
     // 4. Create the Property with the new Logic
     const newProperty = await Property.create({
       ownerId,
-      address,
+      address: formattedAddress || address,
       rentAmount: Number(rentAmount),
       depositAmount: Number(depositAmount),
-      structure, // ✅ Saved for the Tenant's Room-by-Room flow
+      structure,
       maintenanceRules,
       exitPolicy,
       guidelines: typeof guidelines === 'string' ? guidelines.split(",").map((s: string) => s.trim()) : guidelines,
       images: uploadedImages,
       inviteCode,
       status: "vacant",
-      leaseStartDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+      leaseStartDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+      // Save GeoJSON location if coordinates were provided by the map picker
+      ...(latitude && longitude
+        ? {
+            location: {
+              type: "Point",
+              coordinates: [Number(longitude), Number(latitude)], // GeoJSON = [lng, lat]
+            },
+            formattedAddress: formattedAddress || address,
+          }
+        : {}),
     });
 
     return NextResponse.json({ 

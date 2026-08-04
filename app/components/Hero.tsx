@@ -6,9 +6,9 @@ import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 
 const AVATAR_SRCS = [
-  "/prof-1.png",
-  "/prof-2.png",
-  "/prof-3.png",
+  "/av1.png",
+  "/av2.png",
+  "/av3.png",
 ];
 
 export default function Hero() {

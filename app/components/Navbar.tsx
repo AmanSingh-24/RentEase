@@ -163,9 +163,10 @@ observer.observe(sentinel);
       return (
         <button
           onClick={handleRentYourHome}
-          className="hidden sm:block text-sm font-bold text-[#1F2937] px-4 py-2 hover:text-[#0052CC] transition-colors"
+          className="hidden sm:block text-sm font-bold text-[#1F2937] px-4 py-2 relative group transition-colors"
         >
           Rent Your Home
+          <span className="absolute -bottom-0.5 left-4 right-4 h-[1.5px] bg-neutral-900 scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left" />
         </button>
       );
     }
@@ -176,9 +177,10 @@ observer.observe(sentinel);
       return (
         <button
           onClick={handleRentYourHome}
-          className="hidden sm:block text-sm font-bold text-[#1F2937] px-4 py-2 hover:text-[#0052CC] transition-colors border border-gray-200 rounded-xl hover:border-[#0052CC]"
+          className="hidden sm:block text-sm font-bold text-[#1F2937] px-4 py-2 relative group transition-colors border border-gray-200 rounded-xl hover:border-neutral-400"
         >
           Rent Your Home
+          <span className="absolute -bottom-0.5 left-4 right-4 h-[1.5px] bg-neutral-900 scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left" />
         </button>
       );
     }
@@ -188,7 +190,7 @@ observer.observe(sentinel);
         <div className="relative hidden sm:block" ref={hostPanelRef}>
           <button
             onClick={() => setHostStatusPanel(!hostStatusPanel)}
-            className="flex items-center gap-2 text-sm font-bold text-amber-700 bg-amber-50 border border-amber-200 px-4 py-2 rounded-xl hover:bg-amber-100 transition-all"
+            className="flex items-center gap-2 text-sm font-bold text-neutral-800 bg-neutral-100 border border-neutral-200 px-4 py-2 rounded-xl hover:bg-neutral-200 transition-all"
           >
             <Clock size={14} className="animate-pulse" />
             Application (Pending)
@@ -202,15 +204,15 @@ observer.observe(sentinel);
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 8, scale: 0.96 }}
                 transition={{ duration: 0.15 }}
-                className="absolute right-0 mt-2 w-72 bg-white rounded-2xl border border-amber-100 shadow-xl z-50 overflow-hidden"
+                className="absolute right-0 mt-2 w-72 bg-white rounded-2xl border border-neutral-200 shadow-xl z-50 overflow-hidden"
               >
-                <div className="bg-amber-50 px-5 py-4 border-b border-amber-100">
-                  <p className="font-black text-sm text-amber-900">Application Status</p>
+                <div className="bg-neutral-50 px-5 py-4 border-b border-neutral-100">
+                  <p className="font-black text-sm text-neutral-900">Application Status</p>
                 </div>
                 <div className="px-5 py-5 space-y-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
-                      <Clock size={20} className="text-amber-600" />
+                    <div className="w-10 h-10 rounded-xl bg-neutral-200 flex items-center justify-center">
+                      <Clock size={20} className="text-neutral-600" />
                     </div>
                     <div>
                       <p className="font-black text-[#1F2937] text-sm">🟡 Pending Review</p>
@@ -220,7 +222,7 @@ observer.observe(sentinel);
                   <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-xs">
                     <div className="flex justify-between">
                       <span className="text-gray-400 font-medium">Status</span>
-                      <span className="font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Pending</span>
+                      <span className="font-bold text-neutral-700 bg-neutral-100 px-2 py-0.5 rounded-full">Pending</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-400 font-medium">Estimated review</span>
@@ -242,7 +244,7 @@ observer.observe(sentinel);
       return (
         <Link
           href="/dashboard-owner"
-          className="hidden sm:flex items-center gap-2 text-sm font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-4 py-2 rounded-xl hover:bg-emerald-100 transition-all"
+          className="hidden sm:flex items-center gap-2 text-sm font-bold text-white bg-neutral-900 border border-neutral-800 px-4 py-2 rounded-xl hover:bg-black transition-all"
         >
           <Home size={14} />
           Host Dashboard
@@ -255,7 +257,7 @@ observer.observe(sentinel);
         <div className="relative hidden sm:block" ref={hostPanelRef}>
           <button
             onClick={() => setHostStatusPanel(!hostStatusPanel)}
-            className="flex items-center gap-2 text-sm font-bold text-red-700 bg-red-50 border border-red-200 px-4 py-2 rounded-xl hover:bg-red-100 transition-all"
+            className="flex items-center gap-2 text-sm font-bold text-neutral-800 bg-neutral-100 border border-neutral-300 px-4 py-2 rounded-xl hover:bg-neutral-200 transition-all"
           >
             <AlertCircle size={14} />
             Application Rejected
@@ -269,15 +271,15 @@ observer.observe(sentinel);
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 8, scale: 0.96 }}
                 transition={{ duration: 0.15 }}
-                className="absolute right-0 mt-2 w-80 bg-white rounded-2xl border border-red-100 shadow-xl z-50 overflow-hidden"
+                className="absolute right-0 mt-2 w-80 bg-white rounded-2xl border border-neutral-200 shadow-xl z-50 overflow-hidden"
               >
-                <div className="bg-red-50 px-5 py-4 border-b border-red-100">
-                  <p className="font-black text-sm text-red-900">Application Status</p>
+                <div className="bg-neutral-50 px-5 py-4 border-b border-neutral-100">
+                  <p className="font-black text-sm text-neutral-900">Application Status</p>
                 </div>
                 <div className="px-5 py-5 space-y-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center">
-                      <AlertCircle size={20} className="text-red-500" />
+                    <div className="w-10 h-10 rounded-xl bg-neutral-200 flex items-center justify-center">
+                      <AlertCircle size={20} className="text-neutral-600" />
                     </div>
                     <div>
                       <p className="font-black text-[#1F2937] text-sm">❌ Application Rejected</p>
@@ -349,14 +351,10 @@ observer.observe(sentinel);
               <Link
                 key={link.name}
                 href={link.href}
-                className={`text-sm transition-colors relative group px-3 font-bold ${
-  scrolled
-    ? "text-[#1F2937] hover:text-[#0052CC]"
-    : "text-black hover:text-[#0052CC]"
-}`}
+                className={`text-sm transition-colors relative group px-3 font-bold text-[#1F2937]`}
               >
                 {link.name}
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-[#0052CC] transition-all duration-300 group-hover:w-full" />
+                <span className="absolute -bottom-1 left-0 w-0 h-[1.5px] bg-neutral-900 transition-all duration-300 group-hover:w-full" />
               </Link>
             ))}
           </div>
@@ -366,7 +364,7 @@ observer.observe(sentinel);
 
             {session && (session.role === "tenant" || session.role === "pending") && tenantDashboardHref && (
               <Link href={tenantDashboardHref}>
-                <button className="hidden sm:flex items-center gap-2 text-sm font-black text-white bg-[#0052CC] px-4 py-2 rounded-xl hover:bg-[#0041a3] transition-colors shadow-md shadow-blue-200">
+                <button className="hidden sm:flex items-center gap-2 text-sm font-black text-white bg-neutral-900 px-4 py-2 rounded-xl hover:bg-black transition-colors shadow-md">
                   <LayoutDashboard size={14} /> Dashboard
                 </button>
               </Link>
@@ -487,11 +485,11 @@ observer.observe(sentinel);
                     }}
                     className={`w-full py-3 font-bold border rounded-xl transition-colors text-sm ${
                       session?.hostStatus === "pending"
-                        ? "bg-amber-50 text-amber-700 border-amber-200"
+                        ? "bg-neutral-100 text-neutral-800 border-neutral-300"
                         : session?.hostStatus === "approved"
-                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        ? "bg-neutral-900 text-white border-neutral-800"
                         : session?.hostStatus === "rejected"
-                        ? "bg-red-50 text-red-700 border-red-200"
+                        ? "bg-neutral-100 text-neutral-800 border-neutral-300"
                         : "text-[#1F2937] border-gray-200"
                     }`}
                   >

@@ -137,6 +137,11 @@ export async function POST(request: Request) {
 
       // ── Step 3: Ownership Proof
       ownershipProofBase64,
+
+      // ── Geo fields (from Geoapify via frontend)
+      latitude,
+      longitude,
+      formattedAddress,
     } = body;
 
     if (!address || !city || !rentAmount || !bhk) {
@@ -205,10 +210,20 @@ export async function POST(request: Request) {
 
     const newProperty = await Property.create({
       ownerId: session.id,
-      address,
+      address: formattedAddress || address,
       city,
       state: state || "",
       pincode: pincode || "",
+      // Save GeoJSON location if coordinates were provided
+      ...(latitude && longitude
+        ? {
+            location: {
+              type: "Point",
+              coordinates: [Number(longitude), Number(latitude)], // GeoJSON = [lng, lat]
+            },
+            formattedAddress: formattedAddress || address,
+          }
+        : {}),
       rentAmount: Number(rentAmount),
       depositAmount: Number(depositAmount) || 0,
       bhk: Number(bhk),

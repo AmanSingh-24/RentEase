@@ -53,10 +53,10 @@ const DEFAULT_ITEMS: ReviewItem[] = [
     id: "4",
     quote:
       "RentEase transformed how I manage multiple properties. Everything from applications to inspections is finally organized in one place.",
-    name: "Ethan Walker",
-    role: "Property Owner",
-    avatarSrc: "/main.png",
-    photoSrc: "/main.png",
+    name: "Rentease",
+    role: "Property Management Platform",
+    avatarSrc: "/main2.png",
+    photoSrc: "/main2.png",
     variant: "photo",
   },
   {

@@ -23,6 +23,17 @@ import {
 import Navbar from "../../components/Navbar";
 import FAQ from "../../components/Faq";
 import Footer from "../../components/Footer";
+import dynamic from "next/dynamic";
+
+// Dynamically imported to avoid SSR issues with Leaflet's window dependency
+const PropertyMap = dynamic(() => import("../../components/PropertyMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[380px] rounded-3xl bg-neutral-100 animate-pulse flex items-center justify-center">
+      <Loader2 size={24} className="animate-spin text-neutral-400" />
+    </div>
+  ),
+});
 
 const FURNISHING_LABELS: Record<string, string> = {
   unfurnished: "Unfurnished",
@@ -188,16 +199,16 @@ export default function PropertyDetailPage() {
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-100 text-neutral-600 text-xs font-semibold mb-3">
               <Home size={12} /> For Rent
             </div>
-            <h1 className="text-3xl md:text-5xl font-extrabold text-black tracking-tight">{property.address}</h1>
-            <p className="text-sm md:text-base text-neutral-500 flex items-center gap-1.5 mt-2">
-              <MapPin size={16} className="text-neutral-400" />
+            <h1 className="text-2xl md:text-3xl font-extrabold text-black tracking-tight leading-snug max-w-3xl">{property.address}</h1>
+            <p className="text-sm text-neutral-500 flex items-center gap-1.5 mt-1.5">
+              <MapPin size={15} className="text-neutral-400" />
               {property.city}{property.state ? `, ${property.state}` : ""}{property.pincode ? ` — ${property.pincode}` : ""}
             </p>
           </div>
-          <div className="text-left md:text-right">
-            <p className="text-3xl md:text-5xl font-black text-black">
+          <div className="text-left md:text-right flex-shrink-0">
+            <p className="text-2xl md:text-4xl font-black text-black">
               ₹{Number(property.rentAmount).toLocaleString("en-IN")}
-              <span className="text-sm font-semibold text-neutral-400">/mo</span>
+              <span className="text-xs font-semibold text-neutral-400 ml-1">/mo</span>
             </p>
           </div>
         </div>
@@ -326,6 +337,24 @@ export default function PropertyDetailPage() {
                     </span>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Location Map — only shown if property has saved coordinates */}
+            {property.location?.coordinates?.length === 2 && (
+              <div>
+                <h2 className="text-2xl font-extrabold text-black mb-4">Location</h2>
+                <div className="w-full h-[380px] rounded-3xl overflow-hidden border border-neutral-200 shadow-sm">
+                  <PropertyMap
+                    lat={property.location.coordinates[1]}
+                    lng={property.location.coordinates[0]}
+                    address={property.formattedAddress || property.address}
+                  />
+                </div>
+                <p className="text-xs text-neutral-400 mt-2 ml-1 flex items-center gap-1.5">
+                  <MapPin size={12} />
+                  Approximate location — exact address shared after booking approval.
+                </p>
               </div>
             )}
           </div>

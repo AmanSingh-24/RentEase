@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PropertyProvider, useProperty } from "../context/PropertyContext";
+import AddressMapPicker, { type GeoLocation } from "../components/AddressMapPicker";
 
 // ✅ ADDED MESSAGES TO THE CORE PORFOLIO HUB NAVIGATION MATRIX
 const ownerNavItems = [
@@ -50,7 +51,8 @@ function ModalManager() {
     address: "", rentAmount: "", depositAmount: "", rooms: "1",
     furnishing: "unfurnished", guidelines: "", gracePeriodDays: "7",
     repairThreshold: "500", lockInMonths: "11", noticePeriodDays: "30",
-    templateType: "1BHK", images: [] as string[]
+    templateType: "1BHK", images: [] as string[],
+    lat: 0, lng: 0, formattedAddress: "",
   });
 
   useEffect(() => {
@@ -67,7 +69,10 @@ function ModalManager() {
         lockInMonths: editingProperty.exitPolicy?.lockInMonths?.toString() || "11",
         noticePeriodDays: editingProperty.exitPolicy?.noticePeriodDays?.toString() || "30",
         templateType: editingProperty.templateType || "1BHK",
-        images: [] 
+        images: [],
+        lat: editingProperty.location?.coordinates?.[1] || 0,
+        lng: editingProperty.location?.coordinates?.[0] || 0,
+        formattedAddress: editingProperty.formattedAddress || editingProperty.address || "",
       });
       setStep(1); 
     } else if (isModalOpen && !editingProperty) {
@@ -75,7 +80,8 @@ function ModalManager() {
         address: "", rentAmount: "", depositAmount: "", rooms: "1", 
         furnishing: "unfurnished", guidelines: "", gracePeriodDays: "7", 
         repairThreshold: "500", lockInMonths: "11", noticePeriodDays: "30", 
-        templateType: "1BHK", images: [] 
+        templateType: "1BHK", images: [],
+        lat: 0, lng: 0, formattedAddress: "",
       });
       setStep(1);
     }
@@ -90,7 +96,7 @@ function ModalManager() {
       const method = isEditing ? "PUT" : "POST";
 
       const payload = {
-        address: propertyData.address,
+        address: propertyData.formattedAddress || propertyData.address,
         rentAmount: Number(propertyData.rentAmount),
         depositAmount: Number(propertyData.depositAmount),
         ownerId: ownerId,
@@ -100,6 +106,9 @@ function ModalManager() {
         exitPolicy: { lockInMonths: Number(propertyData.lockInMonths), noticePeriodDays: Number(propertyData.noticePeriodDays) },
         guidelines: typeof propertyData.guidelines === 'string' ? propertyData.guidelines.split(",").map(s => s.trim()) : propertyData.guidelines,
         images: propertyData.images || [],
+        latitude: propertyData.lat || undefined,
+        longitude: propertyData.lng || undefined,
+        formattedAddress: propertyData.formattedAddress || undefined,
         ...(isEditing && { propertyId: editingProperty._id }) 
       };
 
@@ -143,12 +152,28 @@ function ModalManager() {
               </div>
 
               {step === 1 ? (
-                <div className="space-y-8">
+                <div className="space-y-6">
                   <h2 className="text-3xl font-black text-[#1F2937] tracking-tight">Property Asset Details</h2>
                   <div className="space-y-6">
                     <div className="space-y-1">
-                       <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-2">Location Identity</label>
-                       <input type="text" value={propertyData.address} placeholder="Full Property Address" className="w-full p-5 bg-gray-50 rounded-2xl outline-none border border-gray-100 font-bold" onChange={e => setPropertyData({...propertyData, address: e.target.value})} />
+                       <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-2">Location Identity *</label>
+                       <AddressMapPicker
+                         placeholder="Search property address..."
+                         initialValue={
+                           propertyData.lat
+                             ? { lat: propertyData.lat, lng: propertyData.lng, formattedAddress: propertyData.formattedAddress }
+                             : undefined
+                         }
+                         onChange={(geo: GeoLocation) => {
+                           setPropertyData((prev) => ({
+                             ...prev,
+                             address: geo.formattedAddress,
+                             formattedAddress: geo.formattedAddress,
+                             lat: geo.lat,
+                             lng: geo.lng,
+                           }));
+                         }}
+                       />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1"><label className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-2">Monthly Rent (₹)</label><input type="number" value={propertyData.rentAmount} className="w-full p-5 bg-gray-50 rounded-2xl border font-black text-emerald-600" onChange={e => setPropertyData({...propertyData, rentAmount: e.target.value})} /></div>

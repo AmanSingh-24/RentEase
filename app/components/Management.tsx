@@ -20,7 +20,7 @@ const FEATURES: Feature[] = [
     description:
       "Capture room-by-room photos with automatic timestamps before moving in. Every approved image becomes trusted digital evidence for both tenants and property owners.",
     bullets: ["Camera-only capture", "Automatic timestamps", "Owner verification"],
-    image: "/m1.jpg",
+    image: "/m-1.png",
   },
   {
     id: 2,
@@ -29,7 +29,7 @@ const FEATURES: Feature[] = [
     description:
       "Manage monthly rent, deposits, invoices and payment history from one dashboard with secure online payments and reminders.",
     bullets: ["Payment tracking", "Rent reminders", "Digital receipts"],
-    image: "/m4.avif",
+    image: "/m-2.png",
   },
   {
     id: 3,
@@ -38,7 +38,7 @@ const FEATURES: Feature[] = [
     description:
       "Raise maintenance issues with photos, monitor progress, and receive live updates until the request is resolved.",
     bullets: ["Photo uploads", "Real-time updates", "Owner notifications"],
-    image: "/m3.avif",
+    image: "/m-3.png",
   },
   {
     id: 4,
@@ -47,7 +47,7 @@ const FEATURES: Feature[] = [
     description:
       "Communicate instantly through secure one-to-one conversations or broadcast important announcements.",
     bullets: ["Private messaging", "Broadcast updates", "Instant notifications"],
-    image: "/m2.avif",
+    image: "/m-4.png",
   },
   {
     id: 5,
@@ -56,7 +56,7 @@ const FEATURES: Feature[] = [
     description:
       "Submit exit notices digitally, compare inspections, verify damages and complete your tenancy with transparency.",
     bullets: ["Exit notices", "Damage comparison", "Refund tracking"],
-    image: "/m6.avif",
+    image: "/m-5.png",
   },
   {
     id: 6,
@@ -65,7 +65,7 @@ const FEATURES: Feature[] = [
     description:
       "Manage properties, tenant applications, inspections, payments and analytics from one centralized workspace.",
     bullets: ["Property management", "Applications", "Analytics"],
-    image: "/m5.png",
+    image: "/m-6.png",
   },
 ];
 
@@ -87,7 +87,7 @@ function StackCard({
         zIndex: index + 1,
       }}
     >
-      <div className="mx-auto max-w-7xl overflow-hidden rounded-3xl border border-neutral-200/80 bg-white shadow-[0_20px_50px_rgba(0,0,0,0.06)] transition-all duration-300">
+      <div className="mx-auto w-full overflow-hidden rounded-3xl border border-neutral-200/80 bg-white shadow-[0_20px_50px_rgba(0,0,0,0.06)] transition-all duration-300">
         <div className="grid grid-cols-1 items-stretch min-h-[380px] lg:grid-cols-12">
           {/* Content side */}
           <div
@@ -145,29 +145,27 @@ function StackCard({
 export default function Management() {
   return (
     <section className="relative bg-white py-24 sm:py-28">
-      <div className="relative mx-auto max-w-7xl px-6 lg:px-10">
-        {/* Left-aligned Header matching Services / Impact / Highlights sections */}
-        <div className="flex flex-col justify-between gap-8 sm:flex-row sm:items-start mb-16">
+      <div className="relative mx-auto w-[96%] max-w-[1800px] px-2 lg:px-4">
+        {/* Header row */}
+        <div className="mb-10 flex flex-col gap-6 lg:mb-14 lg:flex-row lg:items-end lg:justify-between">
           <div>
             {/* Eyebrow */}
-            <div className="flex items-center gap-2">
+            <div className="mb-4 flex items-center gap-2 text-sm text-neutral-500">
               <span className="flex h-4 w-4 items-center justify-center rounded-full border border-neutral-400">
                 <span className="h-1.5 w-1.5 rounded-full bg-neutral-900" />
               </span>
-              <span className="text-sm font-medium uppercase tracking-wider text-neutral-500">
-                RENTAL MANAGEMENT
-              </span>
+              Rental Management
             </div>
 
             {/* Heading */}
-            <h2 className="mt-5 text-5xl font-bold leading-[1.05] tracking-tight text-neutral-950 sm:text-5xl">
+            <h2 className="max-w-xl text-4xl font-extrabold leading-[1.05] tracking-tight text-neutral-950 md:text-5xl">
               <span className="block">Everything After</span>
               <span className="block">Move-In</span>
             </h2>
           </div>
 
-          {/* Right-aligned description text matching Services / Impact row header */}
-          <p className="max-w-xs text-base text-neutral-500 sm:pt-2 sm:text-right sm:text-md">
+          {/* Supporting copy */}
+          <p className="max-w-xs text-neutral-500 lg:text-right">
             RentEase doesn't stop once a property is rented. It manages inspections, payments, maintenance, communication and move-out inside one seamless digital platform.
           </p>
         </div>

@@ -96,6 +96,22 @@ const PropertySchema = new mongoose.Schema({
   state: { type: String },
   pincode: { type: String },
 
+  // ── GeoJSON Location (for map pin & future geo-queries) ──────────────────
+  // MongoDB GeoJSON format: coordinates = [longitude, latitude] (note the order)
+  location: {
+    type: {
+      type: String,
+      enum: ["Point"],
+      default: "Point",
+    },
+    coordinates: {
+      type: [Number], // [longitude, latitude]
+      default: undefined,
+    },
+  },
+  formattedAddress: { type: String, default: "" },
+  // ─────────────────────────────────────────────────────────────────────────
+
   // Property classification
   bhk: { type: Number }, // 1, 2, 3, 4+
   furnishing: {
@@ -131,6 +147,8 @@ PropertySchema.index({ listingStatus: 1, petsAllowed: 1 });
 PropertySchema.index({ listingStatus: 1, createdAt: -1 });
 // Full multi-filter compound (most specific queries hit this)
 PropertySchema.index({ listingStatus: 1, city: 1, bhk: 1, rentAmount: 1 });
+// 2dsphere index — enables $near, $geoWithin, and "properties within X km" queries
+PropertySchema.index({ location: "2dsphere" });
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default mongoose.models.Property || mongoose.model("Property", PropertySchema);

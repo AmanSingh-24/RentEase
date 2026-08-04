@@ -51,11 +51,13 @@ function Word({
   progress,
   range,
   emphasis,
+  isLast,
 }: {
   children: string;
   progress: MotionValue<number>;
   range: [number, number];
   emphasis?: boolean;
+  isLast?: boolean;
 }) {
   const opacity = useTransform(progress, range, [0.15, 1]);
   // Drop the compositing hint once a word is fully revealed so it doesn't
@@ -64,7 +66,7 @@ function Word({
 
   return (
     <span
-      className={`relative mr-[0.28em] inline-block ${
+      className={`relative inline-block ${!isLast ? "mr-[0.28em]" : ""} ${
         emphasis ? "font-bold italic" : "font-normal"
       }`}
     >
@@ -181,7 +183,13 @@ export default function Active() {
                 const start = i / TOTAL_WORDS;
                 const end = (i + 1) / TOTAL_WORDS;
                 return (
-                  <Word key={wi} progress={progress} range={[start, end]} emphasis={word.emphasis}>
+                  <Word 
+                    key={wi} 
+                    progress={progress} 
+                    range={[start, end]} 
+                    emphasis={word.emphasis}
+                    isLast={wi === line.length - 1}
+                  >
                     {word.text}
                   </Word>
                 );

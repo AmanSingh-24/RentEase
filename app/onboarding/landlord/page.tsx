@@ -7,6 +7,7 @@ import {
   CheckCircle, Upload, ChevronRight, ChevronLeft, Loader2, X,
   Plus, Home, MapPin, Sparkles, Camera, IndianRupee, UserCheck, FileText,
 } from "lucide-react";
+import AddressMapPicker, { type GeoLocation } from "../../components/AddressMapPicker";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -103,7 +104,15 @@ export default function LandlordOnboardingPage() {
   const [propertyType, setPropertyType] = useState(""); // maps to bhk field
 
   // Step 2 — Location
-  const [location, setLocation] = useState({ address: "", city: "", state: "", pincode: "" });
+  const [location, setLocation] = useState({
+    address: "",
+    city: "",
+    state: "",
+    pincode: "",
+    lat: 0,
+    lng: 0,
+    formattedAddress: "",
+  });
 
   // Step 3 — Features
   const [features, setFeatures] = useState({
@@ -184,7 +193,10 @@ export default function LandlordOnboardingPage() {
       return false;
     }
     if (step === 2) {
-      if (!location.address.trim()) { setError("Please enter the property address."); return false; }
+      if (!location.formattedAddress.trim() && !location.address.trim()) {
+        setError("Please search and select a property address from the suggestions.");
+        return false;
+      }
       if (!location.city.trim()) { setError("Please enter the city."); return false; }
     }
     if (step === 3 && !features.furnishing) {
@@ -241,10 +253,13 @@ export default function LandlordOnboardingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...ownerDetails,
-          address: location.address,
+          address: location.formattedAddress || location.address,
           city: location.city,
           state: location.state,
           pincode: location.pincode,
+          latitude: location.lat || undefined,
+          longitude: location.lng || undefined,
+          formattedAddress: location.formattedAddress || undefined,
           bhk: bhkMap[propertyType] || "1",
           furnishing: features.furnishing,
           amenities: features.amenities,
@@ -407,18 +422,34 @@ export default function LandlordOnboardingPage() {
           {step === 2 && (
             <div>
               <h2 className="text-2xl font-black text-[#1F2937] mb-2">Where is your property?</h2>
-              <p className="text-gray-400 text-sm mb-8">Only the city and neighborhood will be shown publicly — the full address is revealed only after tenant approval.</p>
+              <p className="text-gray-400 text-sm mb-6">Only the city and neighbourhood will be shown publicly — the full address is revealed only after tenant approval.</p>
               <div className="space-y-5">
+                {/* Address Autocomplete + Map Picker */}
                 <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Full Address *</label>
-                  <input
-                    type="text"
-                    value={location.address}
-                    onChange={(e) => setLocation({ ...location, address: e.target.value })}
-                    placeholder="Flat/Door No, Street, Landmark"
-                    className="mt-1 w-full px-5 py-4 border border-gray-200 rounded-2xl text-sm outline-none focus:border-[#0052CC] focus:ring-2 focus:ring-blue-50"
+                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1 block mb-2">Property Address *</label>
+                  <AddressMapPicker
+                    placeholder="Search flat, street, landmark, area..."
+                    initialValue={
+                      location.lat
+                        ? { lat: location.lat, lng: location.lng, formattedAddress: location.formattedAddress }
+                        : undefined
+                    }
+                    onChange={(geo: GeoLocation) => {
+                      setLocation((prev) => ({
+                        ...prev,
+                        formattedAddress: geo.formattedAddress,
+                        address: geo.formattedAddress,
+                        city: geo.city || prev.city,
+                        state: geo.state || prev.state,
+                        pincode: geo.pincode || prev.pincode,
+                        lat: geo.lat,
+                        lng: geo.lng,
+                      }));
+                    }}
                   />
                 </div>
+
+                {/* City / State / Pincode — auto-filled from Geoapify, editable as fallback */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">City *</label>

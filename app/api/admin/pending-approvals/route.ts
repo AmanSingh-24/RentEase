@@ -26,8 +26,10 @@ export async function GET() {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
 
     // ── Tab 1: Pending Landlord KYC Queue ────────────────────────────────────
+    // NOTE: Users who submitted via landlord onboarding have role="pending" (not "owner")
+    // until the admin approves them. We must include both roles here.
     const pendingLandlords = await User.find({
-      role: "owner",
+      role: { $in: ["owner", "pending"] },
       verificationStatus: "pending_verification",
     })
       .select("-password")

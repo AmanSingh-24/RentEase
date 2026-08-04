@@ -43,7 +43,7 @@ export default function Highlights({
   const prefersReducedMotion = useReducedMotion();
 
   return (
-    <section className={`w-full bg-white ${className}`}>
+    <section className={`w-full bg-[#f9fafb] ${className}`}>
       {/* Static header — plain page content, no scroll wiring at all, so it
           never fades and scrolls away completely normally. */}
       <div className="px-8 pb-24 pt-16 md:px-16 md:pt-20 lg:px-28 lg:pt-24">
@@ -152,8 +152,8 @@ function PinnedStage({
   const marqueeLoop = [...marqueeItems, ...marqueeItems, ...marqueeItems, ...marqueeItems];
 
   return (
-    <div ref={wrapperRef} className="relative w-full" style={{ height: `${scrollHeightVh}vh` }}>
-      <div className="sticky top-0 h-screen w-full overflow-hidden bg-white">
+    <div ref={wrapperRef} className="relative w-full bg-[#f9fafb]" style={{ height: `${scrollHeightVh}vh` }}>
+      <div className="sticky top-0 h-screen w-full overflow-hidden">
         {/* Infinite marquee, vertically centered behind the card */}
         <motion.div
           style={{ opacity: marqueeOpacity }}

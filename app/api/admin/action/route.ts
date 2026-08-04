@@ -90,18 +90,22 @@ export async function POST(request: Request) {
       // ── PROPERTY LISTING ACTIONS ────────────────────────────────────────────
 
       case "approve_property": {
-        // Verify the owner is also verified before approving the property
+        // Verify the owner's KYC is approved before their property can go live
         const property = await Property.findById(targetId).populate("ownerId");
         if (!property) {
           return NextResponse.json({ error: "Property not found" }, { status: 404 });
         }
 
         const owner = property.ownerId as any;
+
+        // Block if owner's KYC is not yet verified
         if (owner.verificationStatus !== "verified") {
+          const isPendingKYC = owner.verificationStatus === "pending_verification";
           return NextResponse.json(
             {
-              error:
-                "Cannot approve this property. The owner's KYC has not been verified yet. Approve the landlord first.",
+              error: isPendingKYC
+                ? "Owner's KYC is still pending review. Please approve the landlord's identity first, then approve this property."
+                : "Owner's identity has not been verified. Approve the landlord's KYC first before approving their property.",
             },
             { status: 400 }
           );

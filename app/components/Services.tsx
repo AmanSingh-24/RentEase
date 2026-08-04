@@ -39,21 +39,21 @@ const DEFAULT_ITEMS: ServiceItem[] = [
     index: ".02",
     eyebrow: "Move In Digitally",
     title: "Sign Agreements, Pay & Complete Inspection",
-    image: "/services-2.png",
+    image: "/service-2.png",
   },
   {
     id: "manage",
     index: ".03",
     eyebrow: "Manage Everything",
     title: "Track Payments, Requests & Your Entire Tenancy",
-    image: "/services-3.png",
+    image: "/service-3.png",
   },
 ];
 
 export default function Services({
-eyebrow = "Our Services",
-heading = "Everything you\nneed to rent smarter",
-description = "From finding verified homes to managing payments, inspections, maintenance, and communication—all in one platform.",
+  eyebrow = "Our Services",
+  heading = "Everything you\nneed to rent smarter",
+  description = "From finding verified homes to managing payments, inspections, maintenance, and communication—all in one platform.",
   items = DEFAULT_ITEMS,
   defaultActiveIndex = 0,
   className = "",
