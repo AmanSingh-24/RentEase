@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { CheckCircle, X, ArrowRight, Sparkles } from "lucide-react";
+import { CheckCircle, X, ArrowRight, Sparkles, ShieldCheck, FileText, Rocket } from "lucide-react";
 
 interface FirstHostModalProps {
   userName: string;
@@ -14,14 +14,12 @@ export default function FirstHostModal({ userName, onDismiss }: FirstHostModalPr
   const router = useRouter();
   const [visible, setVisible] = useState(false);
 
-  // Slight delay so page finishes loading before modal pops
   useEffect(() => {
-    const t = setTimeout(() => setVisible(true), 800);
+    const t = setTimeout(() => setVisible(true), 600);
     return () => clearTimeout(t);
   }, []);
 
   const handleGoToDashboard = async () => {
-    // Clear the flag on the server so this modal never shows again
     await fetch("/api/notifications/dismiss-first-login", { method: "POST" });
     onDismiss();
     window.location.href = "/dashboard-owner";
@@ -41,96 +39,96 @@ export default function FirstHostModal({ userName, onDismiss }: FirstHostModalPr
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9990]"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9990]"
             onClick={handleDismiss}
           />
 
           {/* Modal */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.88, y: 30 }}
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.92, y: 20 }}
+            exit={{ opacity: 0, scale: 0.92, y: 15 }}
             transition={{ type: "spring", stiffness: 350, damping: 28 }}
-            className="fixed inset-0 z-[9991] flex items-center justify-center p-4"
+            className="fixed inset-0 z-[9991] flex items-center justify-center p-4 text-neutral-900"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl relative overflow-hidden">
-              {/* Background decoration */}
-              <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-50 rounded-full opacity-60" />
-              <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-emerald-50 rounded-full opacity-60" />
-
+            <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl relative overflow-hidden border border-neutral-200">
               {/* Close button */}
               <button
                 onClick={handleDismiss}
-                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-200 transition-all z-10"
+                className="absolute top-5 right-5 w-8 h-8 rounded-full border border-neutral-200 bg-neutral-50 flex items-center justify-center text-neutral-500 hover:text-neutral-950 hover:bg-neutral-100 transition-all z-10"
+                title="Close"
               >
                 <X size={16} />
               </button>
 
               {/* Content */}
-              <div className="relative z-10 text-center">
-                {/* Animated celebration icon */}
+              <div className="relative z-10 text-center pt-2">
+                {/* Sleek icon badge */}
                 <motion.div
                   initial={{ scale: 0 }}
-                  animate={{ scale: 1, rotate: [0, -10, 10, -5, 0] }}
-                  transition={{ delay: 0.2, duration: 0.6, ease: "easeInOut" }}
-                  className="w-20 h-20 bg-gradient-to-br from-[#0052CC] to-[#0041a3] rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-xl shadow-blue-200"
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.15, duration: 0.4, ease: "easeOut" }}
+                  className="w-16 h-16 bg-neutral-900 text-white rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg shadow-neutral-900/10"
                 >
-                  <span className="text-4xl">🎉</span>
+                  <ShieldCheck size={32} />
                 </motion.div>
 
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.25 }}
+                >
+                  <h2 className="text-2xl font-extrabold text-neutral-950 mb-1">
+                    Welcome Host, {userName.split(" ")[0]}!
+                  </h2>
+                  <p className="text-neutral-600 font-bold text-xs mb-4 flex items-center justify-center gap-1.5 uppercase tracking-wider">
+                    <Sparkles size={14} className="text-neutral-900" /> Verified RentEase Host Account
+                  </p>
+                  <p className="text-neutral-500 text-xs leading-relaxed mb-6">
+                    Your host application has been officially approved. Your property listing is undergoing final marketplace checks and will go live shortly.
+                  </p>
+                </motion.div>
+
+                {/* Status Timeline List */}
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.35 }}
-                >
-                  <h2 className="text-2xl font-black text-[#1F2937] mb-1">
-                    Congratulations, {userName.split(" ")[0]}!
-                  </h2>
-                  <p className="text-[#0052CC] font-bold text-sm mb-4 flex items-center justify-center gap-1">
-                    <Sparkles size={14} /> You're now a verified RentEase Host
-                  </p>
-                  <p className="text-gray-500 text-sm leading-relaxed mb-6">
-                    Your host application has been approved. Your property listing is being reviewed for the marketplace and will go live soon.
-                  </p>
-                </motion.div>
-
-                {/* What's next */}
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.5 }}
-                  className="bg-gray-50 rounded-2xl p-4 text-left mb-6 space-y-3"
+                  className="bg-neutral-50 border border-neutral-200 rounded-2xl p-4 text-left mb-6 space-y-3"
                 >
                   {[
-                    { icon: "✅", text: "Identity verified by RentEase" },
-                    { icon: "📋", text: "Property listing under marketplace review" },
-                    { icon: "🚀", text: "Go live & start receiving tenant applications" },
+                    { icon: CheckCircle, text: "Identity & KYC verified by RentEase" },
+                    { icon: FileText, text: "Property listing under marketplace audit" },
+                    { icon: Rocket, text: "Go live & start receiving booking applications" },
                   ].map((item, i) => (
                     <div key={i} className="flex items-center gap-3">
-                      <span className="text-lg">{item.icon}</span>
-                      <span className="text-sm font-medium text-gray-600">{item.text}</span>
+                      <div className="w-7 h-7 rounded-lg bg-white border border-neutral-200 flex items-center justify-center text-neutral-900 flex-shrink-0">
+                        <item.icon size={14} />
+                      </div>
+                      <span className="text-xs font-semibold text-neutral-700">{item.text}</span>
                     </div>
                   ))}
                 </motion.div>
 
+                {/* Actions */}
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.6 }}
+                  transition={{ delay: 0.45 }}
                   className="flex gap-3"
                 >
                   <button
                     onClick={handleDismiss}
-                    className="flex-1 py-3.5 border border-gray-200 rounded-2xl font-bold text-sm text-gray-500 hover:bg-gray-50 transition-colors"
+                    className="flex-1 py-3.5 border border-neutral-200 rounded-xl font-bold text-xs text-neutral-600 hover:bg-neutral-50 transition-colors"
                   >
-                    Maybe later
+                    Dismiss
                   </button>
                   <button
                     onClick={handleGoToDashboard}
-                    className="flex-1 py-3.5 bg-[#0052CC] text-white rounded-2xl font-black text-sm hover:bg-[#0041a3] transition-colors flex items-center justify-center gap-2 shadow-lg shadow-blue-200"
+                    className="flex-1 py-3.5 bg-neutral-900 text-white rounded-xl font-bold text-xs hover:bg-black transition-colors flex items-center justify-center gap-2 shadow-md"
                   >
-                    Host Dashboard <ArrowRight size={16} />
+                    Host Dashboard <ArrowRight size={14} />
                   </button>
                 </motion.div>
               </div>

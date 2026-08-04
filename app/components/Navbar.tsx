@@ -177,7 +177,7 @@ observer.observe(sentinel);
       return (
         <button
           onClick={handleRentYourHome}
-          className="hidden sm:block text-sm font-bold text-[#1F2937] px-4 py-2 relative group transition-colors border border-gray-200 rounded-xl hover:border-neutral-400"
+          className="hidden sm:block text-sm font-bold text-[#1F2937] px-4 py-2 relative group transition-colors"
         >
           Rent Your Home
           <span className="absolute -bottom-0.5 left-4 right-4 h-[1.5px] bg-neutral-900 scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left" />
@@ -215,8 +215,8 @@ observer.observe(sentinel);
                       <Clock size={20} className="text-neutral-600" />
                     </div>
                     <div>
-                      <p className="font-black text-[#1F2937] text-sm">🟡 Pending Review</p>
-                      <p className="text-xs text-gray-400">Submitted & awaiting admin review</p>
+                      <p className="font-extrabold text-neutral-900 text-sm">Pending Review</p>
+                      <p className="text-xs text-neutral-500">Submitted & awaiting admin review</p>
                     </div>
                   </div>
                   <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-xs">
@@ -282,8 +282,8 @@ observer.observe(sentinel);
                       <AlertCircle size={20} className="text-neutral-600" />
                     </div>
                     <div>
-                      <p className="font-black text-[#1F2937] text-sm">❌ Application Rejected</p>
-                      <p className="text-xs text-gray-400">You can update & resubmit</p>
+                      <p className="font-extrabold text-neutral-900 text-sm">Application Rejected</p>
+                      <p className="text-xs text-neutral-500">You can update & resubmit</p>
                     </div>
                   </div>
                   {session.rejectionReason && (
