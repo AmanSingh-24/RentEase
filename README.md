@@ -1,476 +1,205 @@
 # 🏠 RentEase — The Digital Witness for Rentals
 
-> **Built to solve a ₹30,000 problem.** A mobile-first PWA that eliminates rental deposit disputes through cryptographic evidence and transparent workflows.
+> **Built to solve a ₹30,000 real-world problem.** A mobile-first Progressive Web App (PWA) that eliminates rental deposit disputes through cryptographic evidence, automated KYC, digital contract signing, and transparent fintech workflows.
 
-[![Next.js](https://img.shields.io/badge/Next.js-14-black)](https://nextjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
-[![MongoDB](https://img.shields.io/badge/MongoDB-7.0-green)](https://www.mongodb.com/)
-
----
-
-## 💡 The Problem
-
-During my 3rd semester break, I witnessed a neighbor lose their entire security deposit in a rental dispute. The landlord claimed damages. The tenant said the damage was pre-existing. **Neither had proof.**
-
-That ₹30,000 loss happened because rentals operate on trust — but trust breaks when there's no shared record of truth.
-
-**RentEase solves this** by acting as a neutral "Digital Witness" that timestamps property conditions, tracks maintenance issues, and automates deposit settlements.
+[![Live App](https://img.shields.io/badge/Live-rent--ease.vercel.app-0052CC?style=for-the-badge&logo=vercel)](https://rentease-five-teal.vercel.app)
+[![Next.js](https://img.shields.io/badge/Next.js_16-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-green?style=for-the-badge&logo=mongodb)](https://www.mongodb.com/)
+[![Razorpay](https://img.shields.io/badge/Razorpay-Payment_Gateway-0052CC?style=for-the-badge)](https://razorpay.com/)
 
 ---
 
-## 🎯 What RentEase Does
+## 💡 The Origin Story
 
-RentEase is a **two-sided rental management platform** that creates an immutable audit trail for both tenants and landlords.
+During my 3rd semester break, I witnessed a neighbor lose their entire ₹30,000 security deposit in a rental dispute. The landlord claimed damages; the tenant insisted the damage was pre-existing. **Neither had proof.**
+
+That loss happened because rentals operate on trust — but trust breaks when there's no shared, verifiable record of truth.
+
+**RentEase was born** to act as a neutral "Digital Witness". What started in **Phase 1** as a PWA management tool has now evolved in **Phase 2 (V2)** into a complete **PropTech Ecosystem** bridging Public Marketplace Discovery, Verified Onboarding, Escrow Payments, HTML5 Legal Signatures, and Production Deployment.
+
+---
+
+## 🚀 Evolution: Phase 1 vs. Phase 2 (V2)
+
+```
+┌──────────────────────────────────────────────┐
+│  Phase 1 (The Foundation)                     │
+│  - Property Management CRUD                  │
+│  - Move-in / Move-out Webcam Inspection      │
+│  - Basic Maintenance & Rent Tracking         │
+│  - Residency Vault Archive                   │
+└──────────────────────┬───────────────────────┘
+                       │
+                       ▼
+┌──────────────────────────────────────────────┐
+│  Phase 2 (V2 — Full PropTech Ecosystem) 🌟   │
+│  - 🏘️ Public Marketplace & Filter Engine      │
+│  - 💳 Razorpay Gateway & Instant Invoicing   │
+│  - 🖊️ HTML5 Canvas Digital Lease Signing     │
+│  - 🔐 Multi-Tier KYC Role State Machine      │
+│  - 👑 Admin Verification Control Center      │
+│  - 🤖 Maintenance Triage Algorithm (<₹500)   │
+│  - 🚀 Production Deployment on Vercel        │
+└──────────────────────────────────────────────┘
+```
+
+---
+
+## 🎯 What RentEase Does Today (V2)
+
+RentEase connects tenants, landlords, and administrators in an automated, secure rental journey:
 
 ### For Tenants 👤
-- 📸 **Move-in documentation** with cryptographic timestamps (camera-only, no gallery uploads)
-- 🔧 **Maintenance tracking** with photo proof and WhatsApp integration
-- 💰 **Rent & deposit ledger** with payment history
-- ⚖️ **Side-by-side move-out comparison** to prove property condition
-- 🏠 **Residency Vault** — portable rental credibility for future landlords
+- 🔍 **Public Marketplace Discovery**: High-speed filtering by BHK count, furnishing, pet policies, price, and floor height.
+- 💳 **Escrow Move-in Payment**: Instant deposit & first-month rent payments integrated with Razorpay gateway.
+- 🖊️ **Digital Lease Signing**: Touch/Mouse signature pad embedding cryptographic audit trails into the rental agreement.
+- 📸 **Digital Witness Move-in Audit**: Room-by-room blueprint photo audit requiring evidence before dashboard access.
+- 🔧 **Self-Fix Reimbursement Vault**: Automatic triage allowing tenants to resolve minor repairs (< ₹500) and request credits with GST/worker proof.
 
-### For Landlords 🏢
-- 🏘️ **Multi-property dashboard** with centralized oversight
-- ✅ **Inspection approval workflows** (co-sign move-in/move-out photos)
-- 📊 **Revenue analytics** with visual payment tracking (Recharts)
-- 🔧 **Maintenance queue** across all properties
-- 📄 **Automated discharge certificates** (jsPDF generation)
+### For Landlords & Hosts 🏠
+- 🏢 **7-Step Asset Onboarding**: Comprehensive listing wizard to register property structure, deposit rules, and upload KYC ID.
+- 📊 **Portfolio Oversight**: Centralized dashboard tracking active tenancies, pending bookings, and financial yields.
+- 🛡️ **Maintenance & Inspection Verification**: Review tenant-submitted inspection photos, verify repair proof, or assign professionals.
+- 🤝 **Tenancy Approvals**: Final verification gate to confirm payment receipts and co-sign lease agreements.
 
----
-
-## 🏗️ System Architecture
-
-### Core Principles
-
-1. **Cryptographic Evidence**: Every photo is timestamped at upload (Cloudinary metadata + app timestamp)
-2. **Camera-Only Uploads**: Gallery photos blocked to prevent backdating
-3. **Inspection Locking**: After landlord approval, baseline photos become immutable
-4. **State-Driven UI**: Dashboard changes based on lease status (Fresh → Active → Archived)
-5. **Two-Sided Marketplace**: Balanced workflows that protect both parties
-
-### Data Flow
-```
-Tenant Signs Up
-    ↓
-Owner Generates Invite Code
-    ↓
-Tenant Joins Property
-    ↓
-Move-In Inspection (Photos Locked After Approval)
-    ↓
-Active Tenancy (Maintenance + Rent Tracking)
-    ↓
-Move-Out Notice → Exit Inspection
-    ↓
-Deposit Settlement (Side-by-Side Comparison)
-    ↓
-Archived Tenancy (Residency Vault)
-```
+### For Platform Admins 👑
+- 🛡️ **Host KYC Control Center**: Inspect landlord applications, verify government IDs, and approve/reject host applications with reasons.
+- 🌐 **Marketplace Moderation**: Live management of active marketplace listings.
 
 ---
 
-## 🛠️ Tech Stack
+## 🛠️ Complete Tech Stack
 
 | Layer | Technology | Purpose |
 |-------|-----------|---------|
-| **Framework** | Next.js 14 (App Router) + TypeScript | Type-safe, server-side rendering |
-| **Styling** | Tailwind CSS + Framer Motion | Responsive design + smooth animations |
-| **Database** | MongoDB (Mongoose ODM) | Complex relationships (Users ↔ Properties ↔ Payments ↔ Inspections) |
-| **Storage** | Cloudinary | Photo metadata preservation + CDN delivery |
-| **Auth** | Firebase Auth (Google) + bcrypt | Passwordless + traditional auth |
-| **Charts** | Recharts | Revenue analytics for landlords |
-| **PDFs** | jsPDF | Automated discharge certificates |
-| **Deployment** | Vercel (planned) | Edge-optimized Next.js hosting |
+| **Core Framework** | Next.js 16 (App Router + Turbopack) + TypeScript | Modern server-side rendering, API routes, and type safety |
+| **Styling & Motion** | Tailwind CSS + Framer Motion | Dynamic animations, glassmorphism, and responsive UI |
+| **Database** | MongoDB Atlas + Mongoose ODM | Compound index searching & complex relational data models |
+| **Authentication** | JWT HTTP-Only Cookies + Firebase Auth (Google) | Secure dual auth with automated cookie token refresh |
+| **Fintech & Payments** | Razorpay Payment Gateway API | Security deposit & rent payment processing with instant receipting |
+| **Asset Storage** | Cloudinary CDN | Preserved metadata & optimized property image delivery |
+| **Signatures & Visuals** | HTML5 Canvas API + Recharts | Touch-friendly digital signing & revenue analytics charts |
+| **Deployment** | Vercel | Live production cloud deployment |
 
 ---
 
-## 📊 Database Schema (Simplified)
+## 🔄 State Machine & Workflow Lifecycles
 
-### User Model
-```typescript
-{
-  name: String,
-  email: String (unique),
-  password: String (bcrypt hashed),
-  role: "owner" | "tenant",
-  propertyId: ObjectId (ref: Property),
-  isOnboarded: Boolean (payment gatekeeper)
-}
+### 1. User Role State Machine
+```
+[Unboarded User] ──(Apply as Host)──► [Host Status: Pending] ──(Admin Verification)──► [Role: Owner / Host]
+        │
+ (Book Property)
+        ▼
+[Role: Pending] ──(Pay Deposit & Sign Lease)──► [Waiting Approval] ──(Owner Verify)──► [Role: Tenant]
 ```
 
-### Property Model
-```typescript
-{
-  ownerId: ObjectId (ref: User),
-  tenantId: ObjectId (ref: User, nullable),
-  address: String,
-  inviteCode: String (unique),
-  rentAmount: Number,
-  depositAmount: Number,
-  status: "vacant" | "occupied" | "under_notice",
-  pastTenants: [{ tenantId, name, movedOutAt }],
-  activeExitId: ObjectId (ref: ExitProcess)
-}
+### 2. Maintenance Triage Engine
 ```
-
-### Inspection Model
-```typescript
-{
-  propertyId: ObjectId (ref: Property),
-  tenantId: ObjectId (ref: User),
-  type: "move-in" | "move-out",
-  status: "pending" | "verified" | "rejected",
-  images: [
-    {
-      url: String,
-      category: String (Kitchen, Bedroom, etc.),
-      timestamp: Date,
-      isCameraCaptured: Boolean (anti-tamper flag)
-    }
-  ]
-}
-```
-
-### Maintenance Model
-```typescript
-{
-  propertyId: ObjectId,
-  tenantId: ObjectId,
-  room: String,
-  description: String,
-  status: "pending" | "contractor_assigned" | "resolved",
-  images: [{ url, isCameraCaptured, timestamp }],
-  contractorInfo: { name, contact, arrivalDesc }
-}
-```
-
-### Payment Model
-```typescript
-{
-  propertyId: ObjectId,
-  tenantId: ObjectId,
-  type: "deposit" | "rent",
-  month: String (e.g., "February"),
-  year: Number,
-  amount: Number,
-  gatewayTransactionId: String,
-  status: "completed"
-}
-```
-
-### Exit Process Model
-```typescript
-{
-  propertyId: ObjectId,
-  tenantId: ObjectId,
-  noticeDate: Date,
-  moveOutDate: Date,
-  status: "notice_served" | "photos_submitted" | "settled" | "archived",
-  moveOutPhotos: [{ area, url, comment }],
-  deductions: [{ item, amount, reason }],
-  finalRefundAmount: Number,
-  isTenantSatisfied: Boolean
-}
+Tenant Reports Fault ──► System Evaluates Est. Cost
+                             │
+            ┌────────────────┴────────────────┐
+            ▼                                 ▼
+      Cost ≤ ₹500                       Cost > ₹500
+ (Tenant-Led Minor Fix)           (Owner-Led Professional Fix)
+            │                                 │
+  Fixes & Uploads Bill               Host Assigns Contractor
+            │                                 │
+   Owner Verifies & Credits            Work Verified & Completed
 ```
 
 ---
 
-## 🚀 Getting Started
+## 📁 Repository & File Structure Highlights
 
-### Prerequisites
-- Node.js **v18+**
-- MongoDB Atlas account (or local MongoDB)
-- Cloudinary account (free tier: 25GB storage)
-- Firebase project (for Google Auth)
+```
+rentease/
+├── app/
+│   ├── page.tsx                    # Landing Page (Hero, Impact, Services, Management)
+│   ├── login/                      # Login with Curvy Clip-Path & Google Auth (Suspense Wrapped)
+│   ├── signup/                     # Signup with Curvy Clip-Path & Google Auth (Suspense Wrapped)
+│   ├── properties/                 # Public Property Marketplace (Filters & Cards)
+│   │   └── [id]/                   # Property Detail Page (3-Image Hero & CTA)
+│   ├── onboarding/
+│   │   └── landlord/               # 7-Step Landlord Asset & KYC Registration Wizard
+│   ├── dashboard-owner/            # Host Dashboard (Properties, Applications, Maintenance, Exit)
+│   ├── dashboard-tenant/           # Tenant Dashboard (Witness Audit, Ledger, Maintenance Vault)
+│   ├── dashboard/
+│   │   ├── onboarding-payment/     # Step 1: Tenant Escrow Deposit Payment (Razorpay)
+│   │   ├── onboarding-rentals/     # Step 2: HTML5 Digital Lease Agreement Signing
+│   │   └── onboarding-approvals/   # Step 3: Awaiting Owner Verification Screen
+│   ├── admin/                      # Admin Control Center (Host KYC Verification)
+│   └── api/                        # Next.js Serverless API Endpoints (40+ routes)
+├── lib/
+│   ├── mongodb.ts                  # Database Connection Pooling
+│   ├── auth-helper.ts              # Session Cookie Authentication
+│   └── firebase.ts                 # Firebase Client Initialization
+└── models/                         # Mongoose Schemas (User, Property, Booking, Inspection, Maintenance, ExitProcess)
+```
 
-### Installation
+---
+
+## ⚡ Getting Started Locally
+
+### 1. Clone & Install Dependencies
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/rentease.git
+git clone https://github.com/AmanSingh-24/RentEase.git
 cd rentease
-
-# Install dependencies
 npm install
-
-# Configure environment variables
-cp .env.example .env.local
 ```
 
-### Environment Variables
+### 2. Configure Local Environment (`.env.local`)
+Create a `.env.local` file in the root directory:
 ```env
-# Database
-MONGODB_URI=your_mongodb_connection_string
+MONGODB_URI=your_mongodb_atlas_uri
+JWT_SECRET=your_32_character_jwt_secret_key
 
-# Cloudinary (Photo Storage)
-NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your_cloud_name
-NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET=your_preset
+CLOUDINARY_CLOUD_NAME=your_cloudinary_name
+CLOUDINARY_API_KEY=your_cloudinary_key
+CLOUDINARY_API_SECRET=your_cloudinary_secret
 
-# Firebase Auth
-NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_auth_domain
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+NEXT_PUBLIC_RAZORPAY_KEY_ID=your_razorpay_key_id
+RAZORPAY_KEY_SECRET=your_razorpay_key_secret
 
+NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_firebase_auth_domain
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_firebase_project_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_firebase_storage_bucket
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_firebase_messaging_id
+NEXT_PUBLIC_FIREBASE_APP_ID=your_firebase_app_id
 ```
 
-### Run Development Server
+### 3. Run Development Server
 ```bash
 npm run dev
 ```
-
-Open [http://localhost:3000](http://localhost:3000) to see the app.
-
----
-
-## 📸 Key Features (Technical Deep Dive)
-
-### 1. Anti-Tampering Photo System
-
-**Problem**: Users could upload old photos from gallery to fake property condition.
-
-**Solution**:
-```typescript
-// Force camera-only uploads
-<input 
-  type="file" 
-  accept="image/*" 
-  capture="environment" // ← Blocks gallery on mobile
-  onChange={verifyFreshPhoto}
-/>
-
-// Verify photo is <60 seconds old
-const verifyFreshPhoto = (file: File) => {
-  const photoAge = Date.now() - file.lastModified;
-  if (photoAge > 60000) {
-    alert("Please use live camera, not gallery");
-    return false;
-  }
-  return true;
-};
-```
-
-**Result**: Every photo gets dual timestamps (app + Cloudinary) for legal defensibility.
+Open [http://localhost:3000](http://localhost:3000) to explore RentEase!
 
 ---
 
-### 2. Inspection Locking Mechanism
+## 📚 Key Engineering Takeaways
 
-**Problem**: After move-in, either party could try to alter baseline photos.
-
-**Solution**:
-```typescript
-// After landlord approval
-await Inspection.findByIdAndUpdate(inspectionId, {
-  status: "verified",
-  verifiedAt: new Date(),
-  verifiedBy: landlordId
-});
-
-// MongoDB prevents further edits
-InspectionSchema.pre('save', function(next) {
-  if (this.status === 'verified' && this.isModified('images')) {
-    throw new Error('Cannot modify verified inspection');
-  }
-  next();
-});
-```
-
-**Result**: Baseline photos become immutable evidence.
+1. **State Machine Security**: Preventing unauthorized dashboard access by guarding routes until both payment and legal contract signatures are verified by the owner.
+2. **Next.js 16 Production Bundling**: Solving static prerender bailouts by wrapping dynamic client hooks (`useSearchParams`) inside `<Suspense>` boundaries.
+3. **Database Performance**: Leveraging compound MongoDB indexes to execute fast full-text multi-filter queries across thousands of marketplace assets.
+4. **Resilient Dual Auth**: Combining standard HTTP-only JWT cookies with Firebase Google OAuth for passwordless user entry.
 
 ---
 
-### 3. Side-by-Side Move-Out Comparison
+## 🌐 Live Production Link
 
-**Problem**: During exit, manual comparison of 50+ photos is tedious and error-prone.
-
-**Solution**:
-```typescript
-// Fetch both inspections
-const moveIn = await Inspection.findOne({ 
-  propertyId, 
-  type: "move-in", 
-  status: "verified" 
-});
-
-const moveOut = await Inspection.findOne({ 
-  propertyId, 
-  type: "move-out" 
-});
-
-// Match photos by category (Kitchen, Bedroom, etc.)
-const comparison = moveIn.images.map(beforeImg => ({
-  before: beforeImg,
-  after: moveOut.images.find(img => img.category === beforeImg.category),
-  category: beforeImg.category
-}));
-```
-
-**UI**: Slider-based comparison (like Instagram before/after) for each room.
+🔗 **[https://rentease-five-teal.vercel.app](https://rentease-five-teal.vercel.app)**
 
 ---
 
-### 4. Maintenance WhatsApp Bridge
-
-**Problem**: Landlords ignore in-app notifications, prefer WhatsApp.
-
-**Solution**:
-```typescript
-// Generate public issue link (no login required)
-const issueLink = `${process.env.NEXT_PUBLIC_URL}/public/issue/${issueId}`;
-
-// Pre-filled WhatsApp message
-const whatsappMsg = encodeURIComponent(`
-🔧 Maintenance Issue Reported
-
-Property: ${property.address}
-Issue: ${issue.description}
-Urgency: ${issue.urgency}
-
-View & Respond: ${issueLink}
-`);
-
-// Redirect to WhatsApp
-window.open(`https://wa.me/${landlordPhone}?text=${whatsappMsg}`);
-```
-
-**Result**: Landlords can approve/reject issues directly from WhatsApp link (syncs back to app).
-
----
-
-## 📈 Analytics & Insights
-
-### Landlord Dashboard Charts (Recharts)
-
-1. **Revenue Over Time**: Monthly rent collection trends
-
-
-### Tenant Dashboard Metrics
-
-1. **Rent Payment Streak**: Consecutive on-time payments
-2. **Maintenance Requests**: Resolved vs pending count
-
----
-
-## 🔐 Security & Privacy
-
-### Data Protection
-- **Passwords**: Bcrypt hashed (salt rounds: 10)
-- **Photos**: Cloudinary signed URLs (1-hour expiry for sensitive docs)
-- **API Routes**: Protected with Next.js middleware (role-based access)
-
-### Privacy Rules
-- **Tenant Data**: Only visible to linked landlord + tenant
-- **Photo Access**: Landlords lose access to photos after tenancy closes (DPDP compliance)
-- **Payment Info**: Masked card numbers, only last 4 digits visible
-
-### Compliance (Planned Phase 2)
-- **DPDP Act (India)**: Right to data deletion + export
-- **Auto-deletion**: Photos deleted 2 years after tenancy ends
-
----
-
-## 🧪 Testing (Phase 2)
-```bash
-# Unit tests
-npm run test
-
-# E2E tests (Playwright)
-npm run test:e2e
-
-# Test coverage
-npm run test:coverage
-```
-
-## 🗺️ Roadmap
-
-### Phase 1 (Current) 
-- [x] User authentication (Firebase + bcrypt)
-- [x] Property management (CRUD)
-- [x] Move-in/move-out inspections
-- [x] Maintenance tracking
-- [x] Rent payment ledger
-- [x] Exit process workflow
-- [x] Residency Vault (archived profiles)
-- [x] PDF certificate generation
-
-### Phase 2 :
-- [ ] **Payment Gateway Integration** (Razorpay/Stripe)
-- [ ] **JWT-based sessions** (replace Firebase tokens)
-- [ ] **Dispute resolution module** (third-party mediation)
-- [ ] **Multi-tenant support** (flatmates with role hierarchy)
-- [ ] **WhatsApp bot** (automated reminders)
-- [ ] **Push notifications** (PWA service workers)
-
----
-
-## 🤝 Contributing
-
-This is a personal learning project, but feedback and suggestions are welcome!
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
----
-
-## 📚 Key Learnings
-
-Building RentEase taught me:
-
-### 1. Complex State Management
-- Designing **non-linear workflows** (lease lifecycle FSM)
-- Handling **conditional UI** based on tenancy status
-- Managing **multi-party approval chains**
-
-### 2. MongoDB Relationships
-- **One-to-Many**: User → Properties
-- **Many-to-Many**: Properties ↔ Inspections ↔ Maintenance
-- **Embedded vs Referenced**: When to denormalize for performance
-
-### 3. Mobile-First PWA
-- **Service workers** for offline support
-- **Camera API** constraints on iOS Safari
-- **Touch-first interactions** (swipe gestures, bottom sheets)
-
-### 4. Real-World Edge Cases
-- What if tenant forgets to do move-in inspection?
-- What if landlord never approves photos?
-- What if property is sold mid-tenancy?
-
----
-
-## 🐛 Known Issues
-
-- [ ] Camera permission prompt inconsistent on iOS Safari
-- [ ] Large photo uploads (>5MB) timeout on slow networks
-- [ ] Firebase Auth refresh token edge case on session expiry
-
----
-
-## 🙏 Acknowledgments
-
-- **Inspiration**: My neighbor's ₹30,000 deposit dispute
-- **Cloudinary**: Free 25GB storage for indie developers
-- **Next.js Team**: For the incredible App Router DX
-- **MongoDB University**: For teaching me schema design patterns
-
----
-
-## 📧 Contact
+## 📧 Contact & Connect
 
 **Aman Kumar Singh**  
 📧 Email: amansighrajput9005@gmail.com  
 🔗 LinkedIn: [Aman Kumar Singh](https://www.linkedin.com/in/aman-kumar-singh-be/)  
+💻 GitHub: [AmanSingh-24](https://github.com/AmanSingh-24)
 
 ---
 
-## 🌟 Star History
-
-If this project helped you understand rental tech or PWA development, please consider giving it a ⭐!
-
----
-
-**Built with 💙 during semester break. From a real problem to a real solution.**
-
----
+**Built with 💙 by a student developer turning real-life problems into production software.**
