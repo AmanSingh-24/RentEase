@@ -2,14 +2,7 @@ import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import ExitProcess from "@/models/ExitProcess";
 
-// ✅ INCREASE BODY LIMIT FOR 28 PHOTOS
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '10mb',
-    },
-  },
-};
+
 
 export async function POST(request: Request) {
   try {
