@@ -9,7 +9,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { auth, googleProvider } from "@/lib/firebase";
 import { signInWithPopup } from "firebase/auth";
 
-export default function LoginPage() {
+import { Suspense } from "react";
+
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect");
@@ -80,8 +82,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-white grid lg:grid-cols-2 overflow-hidden relative">
-      {/* Left Column: Image with curvy clip separation (image sits on the left,
-          so the curve bulges inward from the RIGHT edge of this column — mirror of signup) */}
+      {/* Left Column: Image with curvy clip separation */}
       <motion.div
         initial={{ x: "-100%", opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
@@ -89,7 +90,6 @@ export default function LoginPage() {
         transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         className="hidden lg:block relative w-full h-full min-h-screen"
       >
-        {/* Hidden SVG holding the clip-path definition */}
         <svg width="0" height="0" className="absolute">
           <defs>
             <clipPath id="loginCurve" clipPathUnits="objectBoundingBox">
@@ -243,5 +243,13 @@ export default function LoginPage() {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-white" />}>
+      <LoginContent />
+    </Suspense>
   );
 }
