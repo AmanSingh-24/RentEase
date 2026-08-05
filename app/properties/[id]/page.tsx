@@ -130,7 +130,9 @@ export default function PropertyDetailPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           propertyId: property._id,
+          name: formData.name,
           phone: formData.phone,
+          email: formData.email,
         }),
       });
 

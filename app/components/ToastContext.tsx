@@ -57,12 +57,12 @@ function ToastItem({
   toast: Toast;
   onDismiss: (id: string) => void;
 }) {
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<any>(null);
   const duration = toast.duration ?? 4000;
 
   useEffect(() => {
     timerRef.current = setTimeout(() => onDismiss(toast.id), duration);
-    return () => clearTimeout(timerRef.current);
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [toast.id, duration, onDismiss]);
 
   return (

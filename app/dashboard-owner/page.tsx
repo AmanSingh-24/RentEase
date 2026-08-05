@@ -50,7 +50,7 @@ export default function OwnerDashboard() {
   }, []);
 
   // Mobile Navigation Helper
-  const mobileCards = [
+  const mobileCards: { name: string; icon: any; color: string; iconColor: string; desc: string; href?: string; onClick?: () => void }[] = [
     { name: "Portfolio", icon: LayoutGrid, color: "bg-gray-100", iconColor: "#1F2937", desc: `${stats.count} Active`, href: "/dashboard-owner" },
     { name: "Properties", icon: Building2, color: "bg-blue-50", iconColor: "#0052CC", desc: "View All", href: "/dashboard-owner/properties" },
     { name: "Add New", icon: Plus, color: "bg-green-50", iconColor: "#10B981", desc: "List Asset", href: "/onboarding/landlord" },

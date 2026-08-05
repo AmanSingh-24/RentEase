@@ -32,7 +32,7 @@ export async function GET(request: Request) {
       // Check if a REAL payment exists in the DB for this month
       const paymentRecord = await Payment.findOne({
         propertyId: property._id,
-        tenantId: userId,
+        tenantId: session.id,
         month: monthName,
         year: year,
         type: "rent"
@@ -60,7 +60,7 @@ export async function GET(request: Request) {
 
         // 2. Fetch Approved Maintenance Credits
         const approvedRepairs = await Maintenance.find({
-          tenantId: userId,
+          tenantId: session.id,
           responsibility: "owner",
           isAmountApproved: true,
           isCredited: { $ne: true } // Pick repairs not yet "used up"

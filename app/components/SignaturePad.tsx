@@ -8,9 +8,9 @@ export default function SignaturePad({ onSave }: { onSave: (signature: string) =
 
   const clear = () => sigCanvas.current?.clear();
   const save = () => {
-    if (sigCanvas.current?.isEmpty()) return alert("Please provide a signature");
-    const dataURL = sigCanvas.current?.getTrimmedCanvas().toDataURL("image/png");
-    onSave(dataURL);
+    if (!sigCanvas.current || sigCanvas.current.isEmpty()) return alert("Please provide a signature");
+    const dataURL = sigCanvas.current.getTrimmedCanvas().toDataURL("image/png");
+    if (dataURL) onSave(dataURL);
   };
 
   return (

@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 
 export default function MaintenancePage() {
-  const [issues, setIssues] = useState([]);
+  const [issues, setIssues] = useState<any[]>([]);
   const [property, setProperty] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   

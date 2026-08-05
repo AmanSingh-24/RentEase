@@ -23,12 +23,11 @@ export default function DigitalWitness() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const userId = localStorage.getItem("userId");
-        const propRes = await fetch(`/api/properties/tenant-view?tenantId=${userId}`);
+        const propRes = await fetch(`/api/properties/tenant-view`);
         const propData = await propRes.json();
         setProperty(propData.property);
 
-        const insRes = await fetch(`/api/inspections/get?tenantId=${userId}&type=move-in`);
+        const insRes = await fetch(`/api/inspections/get?type=move-in`);
         const insData = await insRes.json();
         setInspection(insData.inspection);
 
@@ -90,10 +89,16 @@ export default function DigitalWitness() {
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
+    let userId = localStorage.getItem("userId");
+    if (!userId) {
+      const meRes = await fetch("/api/auth/me");
+      const meData = await meRes.json();
+      userId = meData.user?._id;
+    }
     const res = await fetch("/api/inspections/submit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tenantId: localStorage.getItem("userId"), report: auditReport })
+      body: JSON.stringify({ tenantId: userId, report: auditReport })
     });
     if (res.ok) window.location.reload();
     else setIsSubmitting(false);
@@ -134,10 +139,25 @@ export default function DigitalWitness() {
     );
   }
 
-  // ✅ 2. AUDIT FLOW (Visible if no inspection or Rejected)
-  const currentRoom = property.structure[currentRoomIdx];
-  const itemsInCurrentRoom = auditReport.filter(r => r.roomName === currentRoom.roomName);
-  const isRoomComplete = itemsInCurrentRoom.every(item => item.condition === "Good" || (item.condition !== "Good" && item.photoUrl));
+  // ✅ 2. NO PROPERTY OR NO STRUCTURE ASSIGNED YET
+  if (!property || !property.structure || property.structure.length === 0) {
+    return (
+      <div className="p-6 md:p-16 max-w-4xl mx-auto flex flex-col items-center justify-center min-h-[70vh] text-center">
+        <div className="w-24 h-24 rounded-[32px] bg-gray-100 text-gray-400 flex items-center justify-center mb-8">
+          <FileText size={40} />
+        </div>
+        <h1 className="text-3xl font-black text-[#1F2937] mb-4">No Property Assigned</h1>
+        <p className="text-gray-400 max-w-md mb-8 leading-relaxed">
+          You do not currently have an active property lease or your assigned property structure is not set up.
+        </p>
+      </div>
+    );
+  }
+
+  // ✅ 3. AUDIT FLOW (Visible if no inspection or Rejected)
+  const currentRoom = property.structure[currentRoomIdx] || property.structure[0];
+  const itemsInCurrentRoom = auditReport.filter(r => r.roomName === currentRoom?.roomName);
+  const isRoomComplete = itemsInCurrentRoom.length > 0 && itemsInCurrentRoom.every(item => item.condition === "Good" || (item.condition !== "Good" && item.photoUrl));
 
   return (
     <div className="p-6 md:p-16 max-w-4xl mx-auto pb-40">

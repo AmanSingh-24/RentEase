@@ -26,27 +26,27 @@ const DEFAULT_ITEMS: ReviewItem[] = [
     id: "1",
     quote:
       "The digital inspection with timestamped photos made move-in incredibly smooth. Both my landlord and I had complete peace of mind.",
-    name: "Sarah Anderson",
+    name: "Rahul Sharma",
     role: "Tenant",
-    avatarSrc: "/peep-1.png",
+    avatarSrc: "/p-1.png",
     variant: "standard",
   },
   {
     id: "2",
     quote:
       "Managing rent payments, maintenance requests, and documents from one dashboard has saved me hours every single month.",
-    name: "Olivia Bennett",
+    name: "Priya Singh",
     role: "Property Owner",
-    avatarSrc: "/peep-2.png",
+    avatarSrc: "/p-2.png",
     variant: "standard",
   },
   {
     id: "3",
     quote:
       "Verified listings and a transparent onboarding process gave me confidence before signing my rental agreement online.",
-    name: "Liam Carter",
+    name: "Manish Kapoor",
     role: "Tenant",
-    avatarSrc: "/peep-3.png",
+    avatarSrc: "/p-3.png",
     variant: "standard",
   },
   {
@@ -63,18 +63,18 @@ const DEFAULT_ITEMS: ReviewItem[] = [
     id: "5",
     quote:
       "Maintenance issues are tracked from start to finish, and I always know what's happening without endless phone calls.",
-    name: "Maya Torres",
+    name: "Maya Verma",
     role: "Tenant",
-    avatarSrc: "/peep-5.png",
+    avatarSrc: "/p-4.png",
     variant: "standard",
   },
   {
     id: "6",
     quote:
       "The platform makes renting feel professional. Payments, communication, and documents are all handled seamlessly in one ecosystem.",
-    name: "Noah Ellison",
+    name: "Karan Mehta",
     role: "Property Owner",
-    avatarSrc: "/peep-6.png",
+    avatarSrc: "/p-5.png",
     variant: "standard",
   },
 ];

@@ -14,7 +14,8 @@ import {
   Hammer,
   AlertTriangle,
   BadgeCheck,
-  Clock
+  Clock,
+  Camera
 } from "lucide-react";
 
 export default function MaintenanceQueue() {

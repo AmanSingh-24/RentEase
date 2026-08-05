@@ -13,9 +13,16 @@ export async function GET(request: Request) {
 
     await connectToDatabase();
     
-    // ✅ FIX: Changed 'tenants' (plural) to 'tenantId' (singular) 
-    // to match your database dump exactly.
-    const property = await Property.findOne({ tenantId: session.id }).populate("ownerId");
+    const User = (await import("@/models/User")).default;
+    const user = await User.findById(session.id);
+    
+    // Find property assigned directly by tenantId OR linked in User.propertyId
+    const query: any = { $or: [{ tenantId: session.id }] };
+    if (user && user.propertyId) {
+      query.$or.push({ _id: user.propertyId });
+    }
+
+    const property = await Property.findOne(query).populate("ownerId");
 
     console.log("Database Search Result:", property); // Check your terminal to see if it found it!
 

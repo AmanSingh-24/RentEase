@@ -75,6 +75,7 @@ export async function POST(request: Request) {
     // ── Step 3: Grant Tenant Access to Tenancy Dashboard ─────────────────────
     await User.findByIdAndUpdate(tenantId, {
       propertyId: propertyId,
+      role: "tenant",
       isOnboarded: false, // Will become true after they complete deposit payment
     });
 
