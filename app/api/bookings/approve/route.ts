@@ -34,9 +34,10 @@ export async function POST(request: Request) {
     const tenantId = property.tenantId;
     if (!tenantId) return NextResponse.json({ error: "No tenant linked to this property" }, { status: 400 });
 
-    // Grant the tenant full dashboard access
+    // Grant the tenant full dashboard access + promote role from pending to tenant
     await User.findByIdAndUpdate(tenantId, {
       propertyId: property._id,
+      role: "tenant",
       isOnboarded: true,
     });
 

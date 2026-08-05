@@ -33,17 +33,10 @@ export async function POST(request: Request) {
     booking.status = "pending_payment";
     await booking.save();
 
-    // Move property to pending_payment & link tenantId — no longer accepting new bookings
+    // Link tenantId to property so property knows who is assigned, but status is pending_payment
     await Property.findByIdAndUpdate(booking.propertyId, {
       status: "pending_payment",
       tenantId: booking.tenantId,
-    });
-
-    // Also link propertyId & promote role to "tenant" on User document
-    const User = (await import("@/models/User")).default;
-    await User.findByIdAndUpdate(booking.tenantId, {
-      propertyId: booking.propertyId,
-      role: "tenant",
     });
 
     // Reject all other pending bookings for the same property
