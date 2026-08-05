@@ -16,7 +16,6 @@
 .env.production
 .env.development
 .env*.local
-/lib/firebase.ts
 
 /coverage
 
