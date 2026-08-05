@@ -3,12 +3,12 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAoJ-pBflXZ202amzcEIJXY57cdwin43zQ",
-  authDomain: "rentease-68ddd.firebaseapp.com",
-  projectId: "rentease-68ddd",
-  storageBucket: "rentease-68ddd.firebasestorage.app",
-  messagingSenderId: "708004350601",
-  appId: "1:708004350601:web:a0af6a68a487d95a22d458"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
 // Singleton pattern to prevent multiple initializations
