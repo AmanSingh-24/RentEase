@@ -6,13 +6,20 @@ import Inspection from "@/models/Inspection";
 import User from "@/models/User";
 import cloudinary from "@/lib/cloudinary";
 
+import { getSessionUser } from "@/lib/auth-helper";
+
 export async function POST(request: Request) {
   try {
     await connectToDatabase();
-    const { tenantId, roomName, itemName, description, estimatedCost, images } = await request.json();
+    const session = await getSessionUser();
+    
+    if (!session) return NextResponse.json({ error: "Unauthorized session access" }, { status: 401 });
+    if (session.role !== "tenant") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const { roomName, itemName, description, estimatedCost, images } = await request.json();
 
     // 1. Validation & Relationship Lookup
-    const user = await User.findById(tenantId);
+    const user = await User.findById(session.id);
     if (!user || !user.propertyId) {
       return NextResponse.json({ error: "No active tenancy linked" }, { status: 400 });
     }
@@ -65,7 +72,7 @@ export async function POST(request: Request) {
     // 5. CREATE THE ISSUE (Strict alignment with Robust Schema)
     const issue = await Maintenance.create({
       propertyId: property._id,
-      tenantId,
+      tenantId: session.id,
       roomName, // ✅ Fixed: Matches Required Path
       itemName, // ✅ Fixed: Matches Required Path
       description,

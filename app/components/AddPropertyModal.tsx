@@ -236,26 +236,21 @@ export default function AddPropertyModal({ isOpen, onClose, editingProperty, own
             </h2>
             
             {/* Visual Number Indicator Stepper Sequence */}
-            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+            <div className="flex items-center gap-2 mt-3.5 pb-1">
               {stepsList.map((label, idx) => {
                 const stepNum = idx + 1;
                 const isActive = step === stepNum;
                 const isDone = step > stepNum;
                 return (
-                  <div key={label} className="flex items-center gap-1">
-                    <div className={`w-4.5 h-4.5 rounded-full flex items-center justify-center text-[8px] font-black transition-all ${
-                      isActive ? "bg-neutral-900 text-white shadow-xs" : 
-                      isDone ? "bg-neutral-950 text-white" : 
+                  <div key={label} className="flex items-center gap-2">
+                    <div className={`w-7.5 h-7.5 rounded-full flex items-center justify-center text-xs font-black transition-all ${
+                      isActive ? "bg-neutral-900 text-white shadow-md ring-2 ring-offset-2 ring-neutral-900" : 
+                      isDone ? "bg-neutral-950 text-white shadow-xs" : 
                       "bg-neutral-100 text-neutral-400"
                     }`}>
                       {isDone ? "✓" : stepNum}
                     </div>
-                    <span className={`text-[8px] font-black uppercase tracking-wider ${
-                      isActive ? "text-neutral-950" : "text-neutral-400"
-                    }`}>
-                      {label.split(" ")[0]}
-                    </span>
-                    {stepNum < stepsList.length && <span className="text-[10px] text-neutral-300 font-bold">·</span>}
+                    {stepNum < stepsList.length && <span className="text-xs text-neutral-300 font-extrabold mx-0.5">·</span>}
                   </div>
                 );
               })}

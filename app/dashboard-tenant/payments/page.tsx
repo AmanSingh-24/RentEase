@@ -135,13 +135,27 @@ export default function TenantLedger() {
             <h1 className="text-4xl font-black text-[#1F2937] tracking-tight italic">Financial Ledger</h1>
             <p className="text-gray-400 font-medium mt-2 uppercase text-[10px] tracking-[0.2em]">Automated Auditing & Maintenance Credits</p>
           </div>
-          <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex items-center gap-6">
-             <div>
-               <p className="text-[9px] font-black text-gray-400 uppercase mb-1">Vault Status</p>
-               <p className="text-sm font-black text-emerald-600 uppercase tracking-tighter">Excellent</p>
-             </div>
-             <div className="w-px h-8 bg-gray-100" />
-             <ShieldCheck className="text-emerald-500" size={24} />
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Rent Credit Display Card */}
+            {data?.totalUnappliedCredit > 0 && (
+              <div className="bg-emerald-50/50 border border-emerald-100 p-5 rounded-[32px] flex items-center gap-4 shadow-3xs">
+                <div>
+                  <p className="text-[8px] font-black text-emerald-800 uppercase mb-1">Available Rent Credit</p>
+                  <p className="text-lg font-black text-emerald-950 tracking-tight">₹{data.totalUnappliedCredit.toLocaleString("en-IN")}</p>
+                </div>
+                <div className="w-px h-8 bg-emerald-200/50" />
+                <ArrowDownCircle className="text-emerald-600" size={18} />
+              </div>
+            )}
+
+            <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex items-center gap-6">
+               <div>
+                  <p className="text-[9px] font-black text-gray-400 uppercase mb-1">Vault Status</p>
+                  <p className="text-sm font-black text-emerald-600 uppercase tracking-tighter">Excellent</p>
+               </div>
+               <div className="w-px h-8 bg-gray-100" />
+               <ShieldCheck className="text-emerald-500" size={24} />
+            </div>
           </div>
         </header>
 

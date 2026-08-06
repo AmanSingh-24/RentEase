@@ -19,13 +19,15 @@ const MaintenanceSchema = new mongoose.Schema({
   // 🧾 FINANCIAL SEAL
   finalInvoice: { 
     amount: { type: Number, default: 0 }, 
-    url: String // This is the official bill OR the "After" photo
+    url: String, // This is the official bill OR the "After" photo
+    transactionId: String // UPI or Bank Reference ID
   },
   
   // 🕵️ VERIFICATION PROTOCOL (For Local Workers)
   resolutionEvidence: {
     workerName: String,
     workerContact: String,
+    repairCategory: String,
     hasOfficialBill: { type: Boolean, default: true },
     afterImage: String,
     workerVerified: { type: Boolean, default: false },
@@ -37,7 +39,7 @@ const MaintenanceSchema = new mongoose.Schema({
   responsibility: { type: String, enum: ["owner", "tenant", "disputed"], default: "tenant" },
   causation: { 
     type: String, 
-    enum: ["wear_and_tear", "tenant_negligence", "pre_existing", "emergency"],
+    enum: ["wear_and_tear", "tenant_negligence", "pre_existing", "emergency", "pro_resolved"],
     default: "wear_and_tear" 
   },
   

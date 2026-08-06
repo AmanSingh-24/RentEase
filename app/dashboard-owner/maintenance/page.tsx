@@ -1,124 +1,114 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useCallback } from "react";
 import {
-  CheckCircle2,
-  User,
-  Loader2,
-  IndianRupee,
-  FileText,
-  Info,
-  ShieldCheck,
-  XCircle,
-  Hammer,
-  AlertTriangle,
-  BadgeCheck,
-  Clock,
-  Camera
+  Wrench, CheckCircle, XCircle, Loader2,
+  RefreshCw, MapPin, Camera, AlertCircle, 
+  Briefcase, Phone, Clock, ShieldCheck, 
+  Archive, FileText, User, BadgeCheck
 } from "lucide-react";
+
+type MaintenanceTab = "triage" | "progress" | "verification" | "archive";
 
 export default function MaintenanceQueue() {
   const [issues, setIssues] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<MaintenanceTab>("triage");
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
 
   const [selectedIssue, setSelectedIssue] = useState<string | null>(null);
   const [cName, setCName] = useState("");
   const [cPhone, setCPhone] = useState("");
   const [cArrival, setCArrival] = useState("");
 
-  // Dispute Loop States
   const [disputeIssue, setDisputeIssue] = useState<string | null>(null);
   const [disputeReason, setDisputeReason] = useState("");
-  
-  // Worker Verification State
   const [verifyingWorker, setVerifyingWorker] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchQueue();
-  }, []);
+  const showToast = (msg: string, type: "success" | "error") => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3500);
+  };
 
-  const fetchQueue = async () => {
+  const fetchQueue = useCallback(async () => {
+    setLoading(true);
     try {
       const res = await fetch(
-        `/api/maintenance/get-for-owner?ownerId=${localStorage.getItem(
-          "userId"
-        )}`
+        `/api/maintenance/get-for-owner?ownerId=${localStorage.getItem("userId")}`
       );
-
       const data = await res.json();
-
-      if (res.ok) {
-        setIssues(data.issues || []);
-      }
-    } catch (err) {
-      console.error(err);
+      if (res.ok) setIssues(data.issues || []);
+      else showToast(data.error || "Failed to load issues", "error");
+    } catch {
+      showToast("Network error", "error");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-// 1. Updated Verification Function
-const handleVerifyResolution = async (issueId: string) => {
-  try {
-    const res = await fetch("/api/maintenance/action", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        issueId, 
-        action: "verify_and_archive" 
-      })
-    });
-    
-    if (res.ok) {
-      // Force a re-fetch to move the item to history immediately
-      await fetchQueue(); 
-    }
-  } catch (err) {
-    console.error("Verification failed:", err);
-  }
-};
+  useEffect(() => {
+    fetchQueue();
+  }, [fetchQueue]);
 
   const handleAction = async (issueId: string, action: string) => {
+    setActionLoading(issueId + action);
     try {
-      const body: any = {
-        issueId,
-        action,
-      };
-
+      const body: any = { issueId, action };
       if (action === "approve_contractor") {
         body.contractorName = cName;
         body.contractorContact = cPhone;
         body.arrival = cArrival;
       }
-
       const res = await fetch("/api/maintenance/action", {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
       });
-
       if (res.ok) {
+        showToast("Action completed successfully", "success");
         setSelectedIssue(null);
         setCName("");
         setCPhone("");
         setCArrival("");
-        fetchQueue();
+        await fetchQueue();
+      } else {
+        showToast("Action failed", "error");
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
+      showToast("Network error", "error");
+    } finally {
+      setActionLoading(null);
     }
   };
 
-  // Dispute Resolution Handler
+  const handleVerifyResolution = async (issueId: string) => {
+    setActionLoading(issueId + "verify");
+    try {
+      const res = await fetch("/api/maintenance/action", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ issueId, action: "verify_and_archive" })
+      });
+      if (res.ok) {
+        showToast("Resolution verified & archived", "success");
+        await fetchQueue(); 
+      } else {
+        showToast("Verification failed", "error");
+      }
+    } catch {
+      showToast("Network error", "error");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleDisputeVerification = async (issueId: string) => {
     if (!disputeReason.trim()) {
       alert("Please provide a reason for dismissal");
       return;
     }
-
+    setActionLoading(issueId + "dispute");
     try {
       const res = await fetch("/api/maintenance/action", {
         method: "PUT",
@@ -129,595 +119,423 @@ const handleVerifyResolution = async (issueId: string) => {
           feedback: disputeReason
         })
       });
-      
       if (res.ok) {
+        showToast("Resolution rejected", "success");
         setDisputeIssue(null);
         setDisputeReason("");
         await fetchQueue();
+      } else {
+        showToast("Rejection failed", "error");
       }
-    } catch (err) {
-      console.error("Dispute failed:", err);
+    } catch {
+      showToast("Network error", "error");
+    } finally {
+      setActionLoading(null);
     }
   };
 
-  // Worker Verification Handler
   const handleVerifyWorker = async (issueId: string) => {
+    setActionLoading(issueId + "verifyworker");
     try {
       const res = await fetch("/api/maintenance/action", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          issueId, 
-          action: "verify_worker"
-        })
+        body: JSON.stringify({ issueId, action: "verify_worker" })
       });
-      
       if (res.ok) {
+        showToast("Worker verified", "success");
         setVerifyingWorker(null);
         await fetchQueue();
+      } else {
+        showToast("Verification failed", "error");
       }
-    } catch (err) {
-      console.error("Worker verification failed:", err);
+    } catch {
+      showToast("Network error", "error");
+    } finally {
+      setActionLoading(null);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="h-screen flex items-center justify-center">
-        <Loader2 className="animate-spin text-blue-600" />
-      </div>
-    );
-  }
-
-  // Direct Actions Required: Only initial reported items
-  const actionable = issues.filter((i: any) =>
-    i.status === "reported"
+  const actionable = issues.filter((i: any) => i.status === "reported");
+  const inProgress = issues.filter((i: any) => 
+    i.status === "owner_led_fix" || 
+    i.status === "tenant_led_fix" ||
+    (i.status === "resolved" && !i.isAmountApproved && i.ownerFeedback)
   );
+  const verificationQueue = issues.filter((i: any) => {
+    const isTenantFix = i.responsibility === "tenant";
+    const isOwnerDelegatedTenantFix = i.responsibility === "owner" && i.resolutionEvidence?.afterImage;
+    return i.status === "resolved" && !i.isAmountApproved && !i.ownerFeedback && (isTenantFix || isOwnerDelegatedTenantFix);
+  });
+  const history = issues.filter((i: any) => {
+    if (i.status === "resolved" && i.isAmountApproved) return true;
+    if (i.status === "resolved" && i.responsibility === "owner" && !i.resolutionEvidence?.afterImage) return true;
+    return false;
+  });
 
-  // Property Logs: Silent notifications for minor tenant-led repairs (tenant responsibility)
-  const silentLogs = issues.filter(
-    (i: any) => i.status === "tenant_led_fix" && i.responsibility === "tenant"
-  );
+  const getFilteredList = () => {
+    if (activeTab === "triage") return actionable;
+    if (activeTab === "progress") return inProgress;
+    if (activeTab === "verification") return verificationQueue;
+    return history;
+  };
 
-  // Verification Queue: Tenant-submitted evidence awaiting owner approval
-  // Does NOT include items waiting for tenant resubmission (those have ownerFeedback)
-  const verificationQueue = issues.filter(
-    (i: any) => i.status === "resolved" && !i.isAmountApproved && !i.ownerFeedback && i.responsibility === "tenant"
-  );
-
-  // Waiting for Response: Items rejected by owner, waiting for tenant resubmission
-  const waitingForResponse = issues.filter(
-    (i: any) => i.status === "resolved" && !i.isAmountApproved && i.ownerFeedback && i.responsibility === "tenant"
-  );
-
-  // History: Approved tenant work + professional work
-  const history = issues.filter(
-    (i: any) =>
-      (i.status === "resolved" && i.isAmountApproved) ||
-      (i.status === "resolved" && i.responsibility === "owner") // Professional work goes here
-  );
+  const filteredList = getFilteredList();
 
   return (
-    <div className="p-4 md:p-10 lg:p-12 max-w-7xl mx-auto">
-      {/* HEADER */}
-      <header className="mb-12">
-        <h1 className="text-4xl font-black text-[#1F2937] tracking-tight">
-          Portfolio Maintenance
-        </h1>
-      </header>
-
-      <div className="space-y-16">
-        {/* ACTION REQUIRED */}
-        <section className="space-y-6">
-          <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] ml-2">
-            Direct Actions Required
-          </h2>
-
-          {actionable.length === 0 && (
-            <p className="p-10 text-center text-gray-300 text-xs font-black uppercase">
-              No active faults
-            </p>
-          )}
-
-          {actionable.map((issue: any) => (
-            <motion.div
-              key={issue._id}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="bg-white rounded-[48px] border border-gray-100 p-10 shadow-sm flex flex-col lg:flex-row gap-10"
-            >
-              {/* IMAGE */}
-              <div className="w-56 h-56 rounded-[40px] bg-gray-50 overflow-hidden border border-gray-100 shrink-0">
-                {issue.issueImages?.[0] && (
-                  <img
-                    src={issue.issueImages[0].url}
-                    alt="Issue"
-                    className="w-full h-full object-cover"
-                  />
-                )}
-              </div>
-
-              {/* CONTENT */}
-              <div className="flex-1">
-                <div className="flex flex-wrap gap-3 mb-4">
-                  <span className="px-3 py-1 bg-gray-50 text-gray-400 rounded-full text-[9px] font-black uppercase tracking-widest">
-                    {issue.status.replace(/_/g, " ")}
-                  </span>
-
-                  <span
-                    className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${
-                      issue.responsibility === "owner"
-                        ? "bg-blue-50 text-blue-600"
-                        : "bg-orange-50 text-orange-600"
-                    }`}
-                  >
-                    System Assigned: {issue.responsibility}
-                  </span>
-                </div>
-
-                <h3 className="text-2xl font-black text-[#1F2937] uppercase tracking-tight">
-                  {issue.itemName} — {issue.roomName}
-                </h3>
-
-                <p className="text-gray-500 mt-2 font-medium">
-                  "{issue.description}"
-                </p>
-
-                {/* CONTRACTOR FORM */}
-                {selectedIssue === issue._id && (
-                  <motion.div
-                    initial={{ height: 0 }}
-                    animate={{ height: "auto" }}
-                    className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4 p-6 bg-gray-50 rounded-3xl"
-                  >
-                    <input
-                      placeholder="Contractor Name"
-                      className="p-4 bg-white rounded-2xl text-xs font-bold border-none outline-none"
-                      value={cName}
-                      onChange={(e) => setCName(e.target.value)}
-                    />
-
-                    <input
-                      placeholder="Worker Contact"
-                      className="p-4 bg-white rounded-2xl text-xs font-bold border-none outline-none"
-                      value={cPhone}
-                      onChange={(e) => setCPhone(e.target.value)}
-                    />
-
-                    <input
-                      placeholder="Expected Arrival"
-                      type="datetime-local"
-                      className="p-4 bg-white rounded-2xl text-xs font-bold border-none outline-none"
-                      value={cArrival}
-                      onChange={(e) => setCArrival(e.target.value)}
-                    />
-
-                    <button
-                      onClick={() =>
-                        handleAction(issue._id, "approve_contractor")
-                      }
-                      disabled={!cName || !cPhone || !cArrival}
-                      className="bg-[#1F2937] text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Authorize Fixer
-                    </button>
-                  </motion.div>
-                )}
-              </div>
-
-              {/* ACTIONS */}
-              <div className="lg:w-64 flex flex-col gap-3 justify-center lg:border-l lg:pl-10 border-gray-100">
-                {issue.status === "reported" && (
-                  <>
-                    <button
-                      onClick={() => setSelectedIssue(issue._id)}
-                      className="w-full py-4 bg-blue-600 text-white rounded-3xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
-                    >
-                      Assign Professional
-                    </button>
-
-                    <button
-                      onClick={() =>
-                        handleAction(issue._id, "tenant_fix")
-                      }
-                      className="w-full py-4 bg-white border border-gray-200 text-[#1F2937] rounded-3xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-50 transition-all"
-                    >
-                      Tenant-Led Fix
-                    </button>
-                  </>
-                )}
-              </div>
-            </motion.div>
-          ))}
-        </section>
-
-        {/* PROPERTY LOGS - Silent Notifications */}
-        {silentLogs.length > 0 && (
-          <section className="space-y-6">
-            <h2 className="text-[10px] font-black text-gray-300 uppercase tracking-[0.3em] ml-2">
-              Quiet Log (Minor Repairs)
-            </h2>
-
-            <div className="bg-white rounded-[32px] border border-gray-100 overflow-hidden shadow-sm">
-              {silentLogs.map((issue: any) => (
-                <div
-                  key={issue._id}
-                  className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/20 last:border-none hover:bg-gray-50/40 transition-colors"
-                >
-                  <div className="flex items-center gap-5">
-                    <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-400 shrink-0">
-                      <Hammer size={20} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-black text-[#1F2937] uppercase tracking-tight">
-                        {issue.itemName} — {issue.roomName}
-                      </p>
-                      <p className="text-[9px] text-gray-400 font-bold uppercase mt-1">
-                        Tenant-Led Fix • Est. ₹{issue.estimatedCost}
-                      </p>
-                    </div>
-                  </div>
-                  <span className="text-[9px] font-black text-gray-300 uppercase tracking-widest">
-                    {new Date(issue.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* WAITING FOR RESPONSE - Rejected & Awaiting Resubmission */}
-        {waitingForResponse.length > 0 && (
-          <section className="space-y-6">
-            <h2 className="text-[10px] font-black text-orange-600 uppercase tracking-[0.3em] ml-2">
-              Awaiting Tenant Resubmission
-            </h2>
-
-            {waitingForResponse.map((issue: any) => (
-              <motion.div
-                key={issue._id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="bg-orange-50/40 rounded-[48px] border border-orange-200 p-10 shadow-sm flex flex-col lg:flex-row gap-10"
-              >
-                {/* IMAGE */}
-                <div className="w-56 h-56 rounded-[40px] bg-gray-50 overflow-hidden border border-gray-100 shrink-0">
-                  {issue.issueImages?.[0] && (
-                    <img
-                      src={issue.issueImages[0].url}
-                      alt="Issue"
-                      className="w-full h-full object-cover"
-                    />
-                  )}
-                </div>
-
-                {/* CONTENT */}
-                <div className="flex-1">
-                  <div className="flex flex-wrap gap-3 mb-4">
-                    <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-[9px] font-black uppercase tracking-widest">
-                      Awaiting Resubmission
-                    </span>
-                  </div>
-
-                  <h3 className="text-2xl font-black text-[#1F2937] uppercase tracking-tight">
-                    {issue.itemName} — {issue.roomName}
-                  </h3>
-
-                  <div className="mt-6 p-4 bg-white rounded-2xl border border-orange-200">
-                    <p className="text-[9px] font-black text-orange-600 uppercase mb-2 flex items-center gap-2">
-                      <AlertTriangle size={14} /> Your Rejection Reason:
-                    </p>
-                    <p className="text-sm text-gray-700 font-medium">"{issue.ownerFeedback}"</p>
-                  </div>
-
-                  <p className="text-[10px] text-gray-400 uppercase mt-4 font-bold">
-                    Previously Submitted: ₹{issue.finalInvoice?.amount}
-                  </p>
-                </div>
-
-                {/* INFO */}
-                <div className="lg:w-64 flex flex-col justify-center items-center text-center">
-                  <div className="w-12 h-12 bg-orange-100 rounded-2xl flex items-center justify-center text-orange-600 mb-4">
-                    <Clock size={24} />
-                  </div>
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                    Tenant Resubmitting
-                  </p>
-                </div>
-              </motion.div>
-            ))}
-          </section>
-        )}
-
-        {/* VERIFICATION QUEUE */}
-        {verificationQueue.length > 0 && (
-          <section className="space-y-6">
-            <h2 className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.3em] ml-2">
-              Verification Queue (Tenant-Submitted Evidence)
-            </h2>
-
-            {verificationQueue.map((issue: any) => (
-              <motion.div
-                key={issue._id}
-                initial={{ scale: 0.98 }}
-                animate={{ scale: 1 }}
-                className="bg-emerald-50/20 p-10 rounded-[48px] border-2 border-dashed border-emerald-200 flex flex-col xl:flex-row gap-10 relative overflow-hidden"
-              >
-                {/* IMAGES */}
-<div className="flex gap-4 shrink-0">
-    <div className="space-y-2">
-        <p className="text-[8px] font-black text-gray-400 uppercase text-center">Initial Fault</p>
-        <div className="w-40 h-40 rounded-3xl bg-white overflow-hidden border border-gray-100">
-            {issue.issueImages?.[0]?.url ? (
-              <img src={issue.issueImages[0].url} className="w-full h-full object-cover grayscale-[40%]" alt="Before" />
-            ) : (
-              <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-300"><Camera size={32}/></div>
-            )}
+    <div className="space-y-6">
+      {/* Toast Notification */}
+      {toast && (
+        <div
+          className={`fixed top-20 right-6 z-50 px-5 py-3 rounded-xl font-bold text-sm shadow-xl text-white transition-all duration-300 ${
+            toast.type === "success" ? "bg-emerald-600" : "bg-red-600"
+          }`}
+        >
+          {toast.type === "success" ? "✓ " : "✗ "}{toast.msg}
         </div>
-    </div>
-    <div className="space-y-2">
-        <p className="text-[8px] font-black text-emerald-600 uppercase text-center">Resolution Proof</p>
-        <div className="w-40 h-40 rounded-3xl bg-emerald-100 overflow-hidden border-2 border-emerald-400 shadow-xl">
-            {issue.resolutionEvidence?.afterImage ? (
-              <img src={issue.resolutionEvidence.afterImage} className="w-full h-full object-cover" alt="After" />
-            ) : (
-              <div className="w-full h-full bg-emerald-200 flex items-center justify-center text-emerald-400"><Camera size={32}/></div>
-            )}
-        </div>
-    </div>
-</div>
+      )}
 
-                {/* DETAILS */}
-<div className="flex-1">
-    <span className="px-3 py-1 bg-emerald-600 text-white rounded-full text-[9px] font-black uppercase tracking-widest mb-4 inline-block">Audit Protocol Active</span>
-    <h3 className="text-2xl font-black text-[#1F2937] leading-none uppercase tracking-tight">{issue.itemName} — Resolved</h3>
-    <div className="mt-8 grid grid-cols-2 gap-4">
-        <div className="p-5 bg-white rounded-3xl border border-emerald-100 flex items-center gap-4">
-            <div className="w-10 h-10 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600"><IndianRupee size={20}/></div>
-            <div><p className="text-[9px] font-black text-gray-400 uppercase leading-none">Reimbursement</p><p className="text-lg font-black text-emerald-900">₹{issue.finalInvoice?.amount || 0}</p></div>
-        </div>
-        <div className="p-5 bg-white rounded-3xl border border-emerald-100 flex items-center gap-4">
-            <div className="w-10 h-10 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">{issue.resolutionEvidence?.hasOfficialBill ? <FileText size={18}/> : <User size={18}/>}</div>
-            <div><p className="text-[9px] font-black text-gray-400 uppercase leading-none">Provider</p><p className="text-sm font-black text-gray-700">{issue.resolutionEvidence?.hasOfficialBill ? "Official GST" : issue.resolutionEvidence?.workerName || "Local Worker"}</p></div>
-        </div>
-    </div>
-    {/* ✅ FIXED: Correcting Worker Detail visibility */}
-    {!issue.resolutionEvidence?.hasOfficialBill && (
-        <div className="mt-4 p-4 bg-blue-50 rounded-2xl border border-blue-100">
-          <p className="text-[10px] text-blue-700 font-black uppercase flex items-center gap-2 tracking-widest mb-2">
-            <Info size={12}/> Worker: {issue.resolutionEvidence?.workerName} ({issue.resolutionEvidence?.workerContact})
+      {/* ── Top Header ────────────────────────────────────────────────────────── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-black text-neutral-900 tracking-tight mb-1">
+            Maintenance Dashboard
+          </h1>
+          <p className="text-xs text-neutral-500 font-medium max-w-2xl">
+            Triage new issues, track ongoing repairs, and audit resolved tasks across your portfolio.
           </p>
-          {issue.resolutionEvidence?.workerVerified ? (
-            <div className="flex items-center gap-2 text-emerald-600">
-              <BadgeCheck size={14} />
-              <span className="text-[9px] font-black uppercase">Worker Verified</span>
-            </div>
-          ) : (
-            <button 
-              onClick={() => setVerifyingWorker(issue._id)}
-              className="w-full py-2 bg-blue-600 text-white rounded-xl text-[9px] font-black uppercase hover:bg-blue-700 transition-colors"
-            >
-              Verify Worker Details
-            </button>
-          )}
         </div>
-    )}
-</div>
+        <button
+          onClick={fetchQueue}
+          className="flex items-center gap-2 px-4 py-2.5 bg-white border border-neutral-200 rounded-xl text-xs font-bold text-neutral-800 hover:bg-neutral-50 transition-all shadow-2xs active:scale-95 cursor-pointer self-start md:self-auto"
+        >
+          <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Sync Status
+        </button>
+      </div>
 
-                {/* BUTTONS */}
-                <div className="xl:w-64 flex flex-col justify-center gap-3">
-                  {!issue.resolutionEvidence?.workerVerified && !issue.resolutionEvidence?.hasOfficialBill ? (
-                    <button
-                      disabled
-                      className="w-full py-5 bg-gray-300 text-white rounded-3xl font-black text-[10px] uppercase tracking-widest shadow-lg text-center cursor-not-allowed"
-                    >
-                      Verify Worker First
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => handleVerifyResolution(issue._id)}
-                      className="w-full py-5 bg-[#0D9488] text-white rounded-3xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-teal-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
-                    >
-                      <ShieldCheck size={18} />
-                      Verify & Archive
-                    </button>
-                  )}
+      {/* ── Status Tabs ───────────────────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-1.5 bg-neutral-100/80 p-1.5 rounded-2xl w-fit border border-neutral-200/50 shadow-3xs">
+        {[
+          { id: "triage", label: "Triage Needed", count: actionable.length },
+          { id: "progress", label: "In Progress", count: inProgress.length },
+          { id: "verification", label: "Verification", count: verificationQueue.length },
+          { id: "archive", label: "Archived", count: history.length },
+        ].map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as MaintenanceTab)}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                isActive
+                  ? "bg-white text-neutral-950 shadow-xs"
+                  : "text-neutral-500 hover:text-neutral-950 hover:bg-white/50"
+              }`}
+            >
+              {tab.label}
+              <span
+                className={`text-[10px] px-1.5 py-0.5 rounded-md ${
+                  isActive ? "bg-neutral-950 text-white" : "bg-neutral-200 text-neutral-600"
+                }`}
+              >
+                {tab.count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
 
-                  {/* Dispute Amount - Only for Tenant-Submitted Evidence */}
-                  {issue.responsibility === "tenant" && (
-                    <button
-                      onClick={() => setDisputeIssue(issue._id)}
-                      className="text-[9px] font-black text-gray-400 uppercase tracking-widest hover:text-red-500 transition-colors text-center py-2"
-                    >
-                      Reject & Send Back
-                    </button>
-                  )}
-                </div>
-              </motion.div>
-            ))}
-          </section>
-        )}
+      {/* ── Requests List ─────────────────────────────────────────────────────── */}
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="animate-spin text-neutral-950" size={32} />
+        </div>
+      ) : filteredList.length === 0 ? (
+        <div className="bg-white rounded-3xl border border-neutral-200/80 p-16 text-center shadow-2xs">
+          <Wrench size={40} className="text-neutral-300 mx-auto mb-3" />
+          <h3 className="text-base font-bold text-neutral-900 mb-1">
+            No {activeTab} issues
+          </h3>
+          <p className="text-xs text-neutral-500 max-w-sm mx-auto">
+            Everything looks clean here. Enjoy the peace of mind.
+          </p>
+        </div>
+      ) : (
+        <div className={activeTab === "archive" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" : "space-y-4"}>
+          {filteredList.map((issue) => {
+            const isProcessing = actionLoading?.startsWith(issue._id);
+            const propId = typeof issue.propertyId === 'object' ? issue.propertyId : null;
 
-        {/* HISTORY */}
-        <section className="space-y-6 pb-20">
-          <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] ml-2">
-            Verified Vault History
-          </h2>
-
-          <div className="bg-white rounded-[48px] border border-gray-100 overflow-hidden shadow-sm">
-            {history.length === 0 ? (
-              <p className="p-10 text-center text-gray-300 text-[10px] font-black uppercase">
-                Archive empty
-              </p>
-            ) : (
-              history.map((issue: any) => (
-                <div
-                  key={issue._id}
-                  className="p-8 border-b border-gray-50 flex justify-between items-center bg-gray-50/20 last:border-none"
-                >
-                  <div className="flex items-center gap-6">
-                    <div
-                      className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm ${
-                        issue.status === "resolved"
-                          ? "bg-teal-50 text-[#0D9488]"
-                          : "bg-red-50 text-red-500"
-                      }`}
-                    >
-                      {issue.status === "resolved" ? (
-                        <CheckCircle2 size={24} />
+            if (activeTab === "archive") {
+              return (
+                <div key={issue._id} className="bg-white rounded-3xl border border-neutral-200/85 shadow-2xs overflow-hidden flex flex-col p-5">
+                  <div className="flex items-center gap-4 mb-5">
+                    <div className="w-14 h-14 bg-neutral-100 rounded-xl overflow-hidden flex-shrink-0 border border-neutral-200">
+                      {issue.issueImages?.[0]?.url ? (
+                        <img src={issue.issueImages[0].url} alt={issue.itemName} className="w-full h-full object-cover" />
                       ) : (
-                        <XCircle size={24} />
+                        <div className="w-full h-full flex items-center justify-center text-neutral-300"><Camera size={18}/></div>
                       )}
                     </div>
-
                     <div>
-                      <p className="text-sm font-black text-[#1F2937] uppercase tracking-tight">
-                        {issue.itemName} — {issue.roomName}
-                      </p>
-
-                      <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">
-                        {issue.responsibility === "owner" ? "Professional Assigned" : "Responsible: " + issue.responsibility} • Cost: ₹
-                        {issue.finalInvoice?.amount || issue.estimatedCost || 0}
-                      </p>
+                      <h4 className="font-extrabold text-neutral-900 text-sm leading-tight">{issue.itemName}</h4>
+                      <p className="text-[10px] text-neutral-500 font-bold mt-0.5">{issue.roomName}</p>
+                      {propId && (
+                         <p className="text-[9px] text-neutral-400 font-bold uppercase tracking-wide flex items-center gap-1 mt-1">
+                            <MapPin size={10} /> {propId.address || "Asset"}
+                         </p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2.5 mb-5 text-[10px]">
+                    <div className="bg-neutral-50 p-2.5 rounded-xl border border-neutral-200">
+                      <p className="text-neutral-400 font-bold uppercase tracking-wide mb-1">Status</p>
+                      <p className="font-extrabold text-neutral-800 capitalize">{issue.status?.replace(/_/g, " ")}</p>
+                    </div>
+                    <div className="bg-neutral-50 p-2.5 rounded-xl border border-neutral-200">
+                      <p className="text-neutral-400 font-bold uppercase tracking-wide mb-1">Responsibility</p>
+                      <p className="font-extrabold text-neutral-800 capitalize">{issue.responsibility}</p>
+                    </div>
+                    <div className="bg-neutral-50 p-2.5 rounded-xl border border-neutral-200">
+                      <p className="text-neutral-400 font-bold uppercase tracking-wide mb-1">Causation</p>
+                      <p className="font-extrabold text-neutral-800 capitalize">{issue.causation?.replace(/_/g, " ")}</p>
+                    </div>
+                    <div className="bg-neutral-50 p-2.5 rounded-xl border border-neutral-200">
+                      <p className="text-neutral-400 font-bold uppercase tracking-wide mb-1">Final Cost</p>
+                      <p className="font-black text-neutral-900 text-xs">₹{issue.finalInvoice?.amount || issue.estimatedCost || 0}</p>
                     </div>
                   </div>
 
-                  <div className="text-right">
-                    <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest">
-                      {new Date(issue.createdAt).toLocaleDateString()}
-                    </p>
-
-                    <p
-                      className={`text-[9px] font-black uppercase mt-1 ${
-                        issue.status === "resolved"
-                          ? issue.responsibility === "owner"
-                            ? "text-purple-600"
-                            : "text-teal-600"
-                          : "text-red-400"
-                      }`}
-                    >
-                      {issue.status === "resolved"
-                        ? issue.responsibility === "owner"
-                          ? "Professional Fixed"
-                          : "Vault Secured"
-                        : "Rejected"}
-                    </p>
+                  <div className="mt-auto">
+                    <span className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-50 text-emerald-700 border border-emerald-200/50 rounded-xl font-bold text-[10px] uppercase w-full">
+                       <BadgeCheck size={14} /> Audited & Closed
+                    </span>
                   </div>
                 </div>
-              ))
-            )}
-          </div>
-        </section>
+              );
+            }
 
-        {/* REJECTION MODAL */}
-        <AnimatePresence>
-          {disputeIssue && (
-            <div className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-              <motion.div 
-                initial={{ scale: 0.9 }} 
-                animate={{ scale: 1 }} 
-                exit={{ scale: 0.9 }}
-                className="bg-white w-full max-w-md rounded-[48px] p-10 shadow-2xl"
+            return (
+              <div
+                key={issue._id}
+                className="bg-white rounded-2xl border border-neutral-200/85 shadow-2xs overflow-hidden p-5"
               >
-                <h2 className="text-2xl font-black text-[#1F2937] mb-2 leading-none">Reject Submission</h2>
-                <p className="text-gray-400 text-sm mb-8 font-medium tracking-tight">
-                  Provide your reason for rejecting this submission. The tenant will be notified and must resubmit.
-                </p>
-
-                <div className="space-y-4">
-                  <label className="text-[10px] font-black text-gray-400 uppercase block">Rejection Reason</label>
-                  <textarea 
-                    value={disputeReason}
-                    onChange={(e) => setDisputeReason(e.target.value)}
-                    className="w-full p-4 bg-gray-50 rounded-2xl text-sm font-bold outline-none border border-gray-100 focus:border-red-500 resize-none h-24"
-                    placeholder="e.g., Photo quality is poor, bill amount is too high, need better evidence..."
-                  />
-                </div>
-
-                <div className="flex gap-4 mt-10">
-                  <button 
-                    onClick={() => {
-                      setDisputeIssue(null);
-                      setDisputeReason("");
-                    }}
-                    className="flex-1 py-4 text-gray-400 font-bold text-[10px] uppercase hover:text-gray-600"
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    onClick={() => handleDisputeVerification(disputeIssue)}
-                    disabled={!disputeReason.trim()}
-                    className="flex-[2] py-5 bg-red-600 text-white rounded-3xl font-black text-xs uppercase tracking-widest shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Reject & Notify
-                  </button>
-                </div>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
-
-        {/* WORKER VERIFICATION MODAL */}
-        <AnimatePresence>
-          {verifyingWorker && (
-            <div className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-              <motion.div 
-                initial={{ scale: 0.9 }} 
-                animate={{ scale: 1 }} 
-                exit={{ scale: 0.9 }}
-                className="bg-white w-full max-w-md rounded-[48px] p-10 shadow-2xl"
-              >
-                <h2 className="text-2xl font-black text-[#1F2937] mb-2 leading-none">Verify Worker</h2>
-                <p className="text-gray-400 text-sm mb-8 font-medium tracking-tight">
-                  Confirm the worker details are authentic and credible before approval.
-                </p>
-
-                {verificationQueue.find(i => i._id === verifyingWorker) && (
-                  <div className="space-y-4">
-                    <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100">
-                      <p className="text-[9px] font-black text-blue-600 uppercase mb-3">Worker Information</p>
-                      <div className="space-y-2 text-sm">
-                        <p className="font-black text-gray-700">
-                          {verificationQueue.find(i => i._id === verifyingWorker)?.resolutionEvidence?.workerName}
-                        </p>
-                        <p className="text-gray-600">
-                          Phone: {verificationQueue.find(i => i._id === verifyingWorker)?.resolutionEvidence?.workerContact}
-                        </p>
+                <div className="flex flex-col lg:flex-row gap-5">
+                  
+                  {/* Left: Images & Info */}
+                  <div className="flex items-start gap-4 lg:w-1/3">
+                    <div className="w-16 h-16 bg-neutral-100 rounded-xl overflow-hidden flex-shrink-0 border border-neutral-200">
+                      {issue.issueImages?.[0]?.url ? (
+                        <img src={issue.issueImages[0].url} alt={issue.itemName} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-neutral-300"><Camera size={20}/></div>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-extrabold text-neutral-900 text-sm leading-tight">{issue.itemName}</p>
+                        <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600 border border-neutral-200">
+                          {issue.causation?.replace(/_/g, " ")}
+                        </span>
                       </div>
-                    </div>
-
-                    <div className="p-4 bg-green-50 rounded-2xl border border-green-100">
-                      <p className="text-[9px] font-black text-green-600 uppercase mb-2">Verification Checklist</p>
-                      <ul className="text-[10px] text-green-700 space-y-1 font-medium">
-                        <li>✓ Phone number is valid</li>
-                        <li>✓ Worker reputation verified</li>
-                        <li>✓ Rate is market-appropriate</li>
-                        <li>✓ After photos show quality work</li>
-                      </ul>
+                      <p className="text-[11px] text-neutral-500 font-bold">in {issue.roomName}</p>
+                      {propId && (
+                        <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wide flex items-center gap-1">
+                           <MapPin size={10} /> {propId.address || "Asset"}
+                        </p>
+                      )}
                     </div>
                   </div>
-                )}
 
-                <div className="flex gap-4 mt-10">
-                  <button 
-                    onClick={() => setVerifyingWorker(null)}
-                    className="flex-1 py-4 text-gray-400 font-bold text-[10px] uppercase hover:text-gray-600"
-                  >
-                    Needs More Info
-                  </button>
-                  <button 
-                    onClick={() => handleVerifyWorker(verifyingWorker)}
-                    className="flex-[2] py-5 bg-emerald-600 text-white rounded-3xl font-black text-xs uppercase tracking-widest shadow-lg flex items-center justify-center gap-2"
-                  >
-                    <BadgeCheck size={16} />
-                    Confirm Worker
-                  </button>
+                  {/* Middle: Details specific to tab */}
+                  <div className="flex-1 space-y-3 flex flex-col justify-center">
+                    
+                    {activeTab === "triage" && (
+                       <div className="text-xs text-neutral-600 border-l-2 border-neutral-200 pl-3">
+                         <p className="italic">"{issue.description}"</p>
+                         <p className="font-bold text-neutral-800 mt-2">Tenant Estimate: ₹{issue.estimatedCost}</p>
+                       </div>
+                    )}
+
+                    {activeTab === "progress" && (
+                       <div className="text-xs">
+                          {issue.status === "owner_led_fix" && issue.contractorInfo && (
+                            <div className="bg-neutral-50 border border-neutral-200 p-3 rounded-xl space-y-1">
+                               <p className="font-bold text-neutral-800">Professional Dispatched</p>
+                               <p className="text-neutral-600">Contractor: {issue.contractorInfo.name} ({issue.contractorInfo.contact})</p>
+                               <p className="text-neutral-500">Expected: {new Date(issue.contractorInfo.arrival).toLocaleString()}</p>
+                            </div>
+                          )}
+                          {issue.status === "tenant_led_fix" && (
+                            <div className="bg-neutral-50 border border-neutral-200 p-3 rounded-xl">
+                               <p className="font-bold text-neutral-800">Tenant Self-Fixing</p>
+                               <p className="text-neutral-600">Awaiting tenant to submit resolution and invoice.</p>
+                            </div>
+                          )}
+                          {issue.ownerFeedback && (
+                            <div className="mt-2 bg-red-50 border border-red-100 p-3 rounded-xl text-red-800">
+                              <p className="font-bold flex items-center gap-1.5"><AlertCircle size={14}/> Resolution Rejected</p>
+                              <p className="italic mt-1">"{issue.ownerFeedback}"</p>
+                            </div>
+                          )}
+                       </div>
+                    )}
+
+                    {activeTab === "verification" && (
+                       <div className="space-y-3">
+                         <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-neutral-50 border border-neutral-200 p-3 rounded-xl">
+                               <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Final Cost</p>
+                               <p className="text-lg font-black text-neutral-900">₹{issue.finalInvoice?.amount || 0}</p>
+                            </div>
+                            <div className="bg-neutral-50 border border-neutral-200 p-3 rounded-xl">
+                               <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Category</p>
+                               <p className="text-sm font-bold text-neutral-800">{issue.resolutionEvidence?.repairCategory || "Other"}</p>
+                            </div>
+                         </div>
+                         <div className="bg-neutral-50 border border-neutral-200 p-3 rounded-xl flex items-center justify-between gap-2">
+                            <div>
+                               <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Transaction ID</p>
+                               <p className="text-sm font-bold text-neutral-800">{issue.finalInvoice?.transactionId || "N/A"}</p>
+                            </div>
+                            {issue.finalInvoice?.url && (
+                              <a href={issue.finalInvoice.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-[10px] font-bold uppercase bg-white border border-neutral-200 px-3 py-1.5 rounded-lg text-neutral-700 hover:bg-neutral-100 transition-colors shrink-0">
+                                <FileText size={12} /> View Proof
+                              </a>
+                            )}
+                         </div>
+                       </div>
+                    )}
+
+                  </div>
+
+                  {/* Right: Actions */}
+                  <div className="flex flex-col lg:items-end justify-center gap-2 lg:w-[220px] flex-shrink-0">
+                    
+                    {activeTab === "triage" && selectedIssue !== issue._id && (
+                      <>
+                        <button
+                          disabled={!!isProcessing}
+                          onClick={() => handleAction(issue._id, "tenant_fix")}
+                          className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 bg-white border border-neutral-200 hover:bg-neutral-50 text-neutral-700 rounded-xl font-bold text-xs shadow-3xs transition-all active:scale-95 disabled:opacity-50"
+                        >
+                          Delegate to Tenant
+                        </button>
+                        <button
+                          disabled={!!isProcessing}
+                          onClick={() => setSelectedIssue(issue._id)}
+                          className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 bg-neutral-900 hover:bg-black text-white rounded-xl font-bold text-xs shadow-xs transition-all active:scale-95 disabled:opacity-50"
+                        >
+                          <Briefcase size={14} /> Dispatch Pro
+                        </button>
+                      </>
+                    )}
+
+                    {activeTab === "triage" && selectedIssue === issue._id && (
+                       <div className="w-full bg-neutral-50 border border-neutral-200 p-3 rounded-xl space-y-2 shadow-sm">
+                          <input placeholder="Pro Name" className="w-full p-2 text-xs border border-neutral-200 rounded-lg outline-none" value={cName} onChange={(e)=>setCName(e.target.value)} />
+                          <input placeholder="Pro Phone" className="w-full p-2 text-xs border border-neutral-200 rounded-lg outline-none" value={cPhone} onChange={(e)=>setCPhone(e.target.value)} />
+                          <input type="datetime-local" className="w-full p-2 text-xs border border-neutral-200 rounded-lg outline-none text-neutral-500" value={cArrival} onChange={(e)=>setCArrival(e.target.value)} />
+                          <div className="flex gap-2 pt-1">
+                            <button onClick={()=>setSelectedIssue(null)} className="flex-1 py-1.5 text-xs font-bold text-neutral-500 hover:text-neutral-800">Cancel</button>
+                            <button 
+                              onClick={()=>handleAction(issue._id, "approve_contractor")} 
+                              disabled={!cName || !cPhone || !cArrival || !!isProcessing} 
+                              className="flex-[2] py-1.5 bg-neutral-900 text-white text-xs font-bold rounded-lg disabled:opacity-50"
+                            >
+                              Assign
+                            </button>
+                          </div>
+                       </div>
+                    )}
+
+                    {activeTab === "progress" && (
+                      <span className="flex items-center justify-center gap-1.5 px-4 py-2 bg-neutral-100 text-neutral-500 rounded-xl font-bold text-[10px] uppercase w-full">
+                         <Clock size={14} /> Pending Resolution
+                      </span>
+                    )}
+
+                    {activeTab === "verification" && (
+                      <>
+                        {issue.resolutionEvidence?.workerName && !issue.resolutionEvidence.workerVerified && (
+                           <button
+                             onClick={() => setVerifyingWorker(issue._id)}
+                             className="w-full flex items-center justify-center gap-1.5 px-4 py-2 bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 rounded-xl font-bold text-[10px] uppercase shadow-3xs transition-all mb-1"
+                           >
+                             Verify Contact
+                           </button>
+                        )}
+                        <button
+                          disabled={!!isProcessing}
+                          onClick={() => handleVerifyResolution(issue._id)}
+                          className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 bg-neutral-900 hover:bg-black text-white rounded-xl font-bold text-xs shadow-xs transition-all active:scale-95 disabled:opacity-50"
+                        >
+                          {isProcessing ? <Loader2 size={13} className="animate-spin" /> : <ShieldCheck size={14} />}
+                          Approve
+                        </button>
+                        <button
+                          disabled={!!isProcessing}
+                          onClick={() => setDisputeIssue(issue._id)}
+                          className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 bg-white border border-neutral-200 hover:bg-red-50 hover:border-red-200 hover:text-red-600 text-neutral-600 rounded-xl font-bold text-xs shadow-3xs transition-all active:scale-95 disabled:opacity-50"
+                        >
+                          Reject
+                        </button>
+                      </>
+                    )}
+
+                  </div>
                 </div>
-              </motion.div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* DISMISS REJECTION MODAL */}
+      {disputeIssue && (
+        <div className="fixed inset-0 z-[100] bg-neutral-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-[24px] p-6 shadow-2xl border border-neutral-200">
+            <h2 className="text-xl font-black text-neutral-900 mb-1">Reject Evidence</h2>
+            <p className="text-xs text-neutral-500 font-medium mb-5">Provide feedback so the tenant can correct their submission.</p>
+
+            <textarea 
+              value={disputeReason}
+              onChange={(e) => setDisputeReason(e.target.value)}
+              className="w-full p-3 bg-neutral-50 rounded-xl text-xs border border-neutral-200 focus:border-neutral-400 outline-none resize-none h-28 mb-5 font-medium"
+              placeholder="e.g., The receipt photo is blurry..."
+            />
+
+            <div className="flex gap-3">
+              <button onClick={() => { setDisputeIssue(null); setDisputeReason(""); }} className="flex-1 py-2.5 text-xs font-bold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl">Cancel</button>
+              <button onClick={() => handleDisputeVerification(disputeIssue)} disabled={!disputeReason.trim()} className="flex-[2] py-2.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl disabled:opacity-50">Send Rejection</button>
             </div>
-          )}
-        </AnimatePresence>
-      </div>
+          </div>
+        </div>
+      )}
+
+      {/* WORKER VERIFICATION MODAL */}
+      {verifyingWorker && (
+        <div className="fixed inset-0 z-[100] bg-neutral-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-[24px] p-6 shadow-2xl border border-neutral-200">
+            <h2 className="text-xl font-black text-neutral-900 mb-1">Verify Worker</h2>
+            <p className="text-xs text-neutral-500 font-medium mb-5">Confirm worker details before authorizing the rent credit.</p>
+
+            {verificationQueue.find(i => i._id === verifyingWorker) && (
+              <div className="bg-neutral-50 rounded-xl border border-neutral-200 p-4 mb-5">
+                <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Local Pro Details</p>
+                <p className="font-extrabold text-neutral-900 text-sm">{verificationQueue.find(i => i._id === verifyingWorker)?.resolutionEvidence?.workerName}</p>
+                <p className="text-xs text-neutral-600 mt-0.5">{verificationQueue.find(i => i._id === verifyingWorker)?.resolutionEvidence?.workerContact}</p>
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button onClick={() => setVerifyingWorker(null)} className="flex-1 py-2.5 text-xs font-bold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl">Cancel</button>
+              <button onClick={() => handleVerifyWorker(verifyingWorker)} className="flex-[2] py-2.5 text-xs font-bold text-white bg-neutral-900 hover:bg-black rounded-xl">Confirm Verified</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

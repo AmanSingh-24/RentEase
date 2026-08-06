@@ -8,7 +8,11 @@ export async function PUT(request: Request) {
   try {
     await connectToDatabase();
     const body = await request.json();
-    const { issueId, action, contractorName, contractorContact, arrival, feedback, receiptAmount, workerName, workerContact, hasOfficialBill, afterImage, isResubmission } = body;
+    const { 
+      issueId, action, contractorName, contractorContact, arrival, feedback, 
+      receiptAmount, workerName, workerContact, afterImage, isResubmission,
+      repairCategory, transactionId, paymentProof 
+    } = body;
 
     const issue = await Maintenance.findById(issueId);
     if (!issue) return NextResponse.json({ error: "Issue not found" }, { status: 404 });
@@ -22,7 +26,7 @@ export async function PUT(request: Request) {
     } 
     else if (action === "tenant_fix") {
       updateData.status = "tenant_led_fix";
-      updateData.responsibility = "tenant"; // Update responsibility so tenant can submit evidence
+      // Keep original responsibility (does NOT force 'tenant' responsibility, allowing owner-financed credit)
     } 
     else if (action === "reject") {
       updateData.status = "rejected";
@@ -31,25 +35,37 @@ export async function PUT(request: Request) {
 
     // 2. TENANT RESOLUTION (Handles Visual & Verbal Proof)
     if (action === "resolve") {
-      let uploadedUrl = "";
+      let afterImageUrl = "";
+      let paymentProofUrl = "";
+
       // If a new base64 image is provided, upload it to the Resolutions folder
       if (afterImage && afterImage.startsWith("data:image")) {
         const cloudRes = await cloudinary.uploader.upload(afterImage, { 
             folder: "rentease/maintenance_resolutions" 
         });
-        uploadedUrl = cloudRes.secure_url;
+        afterImageUrl = cloudRes.secure_url;
+      }
+
+      // If a new base64 file is provided for payment proof, upload it
+      if (paymentProof && paymentProof.startsWith("data:")) {
+        const cloudRes2 = await cloudinary.uploader.upload(paymentProof, {
+            folder: "rentease/maintenance_receipts"
+        });
+        paymentProofUrl = cloudRes2.secure_url;
       }
 
       updateData.status = "resolved";
       updateData.finalInvoice = { 
         amount: Number(receiptAmount) || 0, 
-        url: uploadedUrl 
+        url: paymentProofUrl,
+        transactionId: transactionId || ""
       };
       updateData.resolutionEvidence = {
-        workerName,
-        workerContact,
-        hasOfficialBill,
-        afterImage: uploadedUrl
+        workerName: workerName || "",
+        workerContact: workerContact || "",
+        repairCategory: repairCategory || "",
+        afterImage: afterImageUrl,
+        workerVerified: false
       };
 
       // If this is a resubmission after rejection, clear the feedback
@@ -58,9 +74,15 @@ export async function PUT(request: Request) {
       }
     }
 
-    // 3. OWNER VERIFICATION (Moves to History)
+    // 3. OWNER VERIFICATION (Moves to History + Auto-verify)
     if (action === "verify_and_archive") {
       updateData.isAmountApproved = true;
+      // Auto-verify worker details under the hood to bypass the double-click workflow
+      updateData.resolutionEvidence = {
+        ...(issue.resolutionEvidence || {}),
+        workerVerified: true,
+        workerVerifiedAt: new Date()
+      };
     }
 
     // 4. OWNER REJECTS TENANT SUBMISSION (Keeps status as resolved, adds feedback)
@@ -82,6 +104,7 @@ export async function PUT(request: Request) {
     // 6. TENANT CONFIRMS PROFESSIONAL WORK IS COMPLETE
     if (action === "professional_work_complete") {
       updateData.status = "resolved";
+      updateData.causation = "pro_resolved";
       // Preserve existing contractor info for owner reference
     }
 

@@ -27,7 +27,9 @@ export default function MaintenancePage() {
   const [tempImages, setTempImages] = useState<any[]>([]);
   
   // Resolution State
-  const [hasOfficialBill, setHasOfficialBill] = useState(true);
+  const [repairCategory, setRepairCategory] = useState("");
+  const [transactionId, setTransactionId] = useState("");
+  const [paymentProof, setPaymentProof] = useState("");
   const [workerName, setWorkerName] = useState("");
   const [workerContact, setWorkerContact] = useState("");
   const [afterImage, setAfterImage] = useState("");
@@ -38,8 +40,17 @@ export default function MaintenancePage() {
 
   // Clear states when switching modes to prevent duplication
   useEffect(() => {
-    setAfterImage(""); setReceiptAmount(""); setWorkerName(""); setWorkerContact("");
-  }, [hasOfficialBill]);
+    setAfterImage(""); setReceiptAmount(""); setWorkerName(""); setWorkerContact(""); setRepairCategory(""); setTransactionId(""); setPaymentProof("");
+  }, [resolvingIssue, resubmittingIssue]);
+
+  const handlePaymentProofUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => setPaymentProof(event.target?.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
 
   useEffect(() => { 
     const init = async () => {
@@ -127,9 +138,11 @@ const submitResolution = async () => {
         issueId: issue._id, 
         action: "resolve", 
         receiptAmount,
+        repairCategory,
+        transactionId,
+        paymentProof,
         workerName,
         workerContact,
-        hasOfficialBill,
         afterImage,
         isResubmission: !!resubmittingIssue
       })
@@ -142,6 +155,9 @@ const submitResolution = async () => {
       setWorkerName("");
       setWorkerContact("");
       setReceiptAmount("");
+      setRepairCategory("");
+      setTransactionId("");
+      setPaymentProof("");
       fetchMaintenance();
     }
   } catch (err) {
@@ -216,11 +232,13 @@ const submitResolution = async () => {
       if (!issue) return;
 
       // Pre-fill the form with old data
-      setHasOfficialBill(issue.resolutionEvidence?.hasOfficialBill ?? true);
+      setRepairCategory(issue.resolutionEvidence?.repairCategory || "");
+      setTransactionId(issue.finalInvoice?.transactionId || "");
+      // Not pre-filling payment proof image, forcing re-upload to be safe
       setWorkerName(issue.resolutionEvidence?.workerName || "");
       setWorkerContact(issue.resolutionEvidence?.workerContact || "");
-      setReceiptAmount(issue.finalInvoice?.amount || "");
       setAfterImage(issue.resolutionEvidence?.afterImage || "");
+      setReceiptAmount(issue.finalInvoice?.amount || "");
 
       // Mark as resubmitting
       setResubmittingIssue(issue);
@@ -230,18 +248,46 @@ const submitResolution = async () => {
   };
 
   // Pending Owner Review: Tenant submitted, waiting for owner approval (no feedback yet)
-  const pending = issues.filter((i: any) => i.status === "resolved" && !i.isAmountApproved && !i.ownerFeedback && i.responsibility === "tenant");
+  const pending = issues.filter((i: any) => {
+    const isTenantFix = i.responsibility === "tenant";
+    const isOwnerDelegatedTenantFix = i.responsibility === "owner" && i.resolutionEvidence?.afterImage;
+    return i.status === "resolved" && !i.isAmountApproved && !i.ownerFeedback && (isTenantFix || isOwnerDelegatedTenantFix);
+  });
   
   // Resubmission Required: Owner rejected with feedback, tenant needs to resubmit
-  const rejected = issues.filter((i: any) => i.status === "resolved" && !i.isAmountApproved && i.ownerFeedback && i.responsibility === "tenant");
+  const rejected = issues.filter((i: any) => {
+    const isTenantFix = i.responsibility === "tenant";
+    const isOwnerDelegatedTenantFix = i.responsibility === "owner" && i.resolutionEvidence?.afterImage;
+    return i.status === "resolved" && !i.isAmountApproved && i.ownerFeedback && (isTenantFix || isOwnerDelegatedTenantFix);
+  });
   
   // History: Approved tenant work + professional work
-  const history = issues.filter((i: any) => (i.status === "resolved" && i.isAmountApproved) || (i.status === "resolved" && i.responsibility === "owner"));
+  const history = issues.filter((i: any) => {
+    if (i.status === "resolved" && i.isAmountApproved) return true;
+    if (i.status === "resolved" && i.responsibility === "owner" && !i.resolutionEvidence?.afterImage) return true;
+    return false;
+  });
+
+  // Calculate total active/unapplied rent credit granted to the tenant
+  const pendingCredits = issues.filter(
+    (i: any) => i.responsibility === "owner" && i.isAmountApproved && !i.isCredited
+  );
+  const totalRentCredit = pendingCredits.reduce((sum, item) => sum + (item.finalInvoice?.amount || 0), 0);
 
   return (
     <div className="p-4 md:p-10 lg:p-12 max-w-7xl mx-auto">
-      <header className="mb-12 flex justify-between items-end">
-        <h1 className="text-4xl font-black text-[#1F2937]">Maintenance Vault</h1>
+      <header className="mb-12 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+        <div>
+          <h1 className="text-4xl font-black text-[#1F2937]">Maintenance Vault</h1>
+          {totalRentCredit > 0 && (
+            <div className="mt-3 inline-flex items-center gap-2 px-3.5 py-1.5 bg-emerald-50 border border-emerald-200/60 rounded-full shadow-3xs">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+              <p className="text-[10px] font-black text-emerald-800 uppercase tracking-wider">
+                Granted Rent Credit: ₹{totalRentCredit.toLocaleString("en-IN")} (Applied to next invoice)
+              </p>
+            </div>
+          )}
+        </div>
         <button onClick={() => setIsReporting(true)} className="bg-[#1F2937] text-white px-8 py-4 rounded-[32px] font-black text-xs uppercase shadow-xl flex items-center gap-2"><Plus size={18} /> Report Issue</button>
       </header>
 
@@ -561,32 +607,71 @@ const submitResolution = async () => {
       <AnimatePresence>
         {(resolvingIssue || resubmittingIssue) && (
           <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white w-full max-w-md rounded-[48px] p-10 shadow-2xl">
+            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white w-full max-w-md rounded-[48px] p-10 shadow-2xl max-h-[90vh] overflow-y-auto">
               <h2 className="text-2xl font-black text-[#1F2937] mb-2 leading-none">{resubmittingIssue ? "Resubmit Evidence" : "Repair Finalization"}</h2>
               <p className="text-gray-400 text-sm mb-10 font-medium tracking-tight">{resubmittingIssue ? "Address the feedback and resubmit corrected evidence." : "Provide verification for reimbursement protocol."}</p>
 
               <div className="space-y-6">
-                <div className="flex bg-gray-100 p-1.5 rounded-2xl">
-                  <button onClick={() => setHasOfficialBill(true)} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${hasOfficialBill ? 'bg-white shadow-sm text-teal-600' : 'text-gray-400'}`}>Official Bill</button>
-                  <button onClick={() => setHasOfficialBill(false)} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${!hasOfficialBill ? 'bg-white shadow-sm text-teal-600' : 'text-gray-400'}`}>Local Worker</button>
+                
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase ml-2 mb-2 block">Repair Type</label>
+                  <select 
+                    value={repairCategory} 
+                    onChange={(e) => {
+                      setRepairCategory(e.target.value);
+                      if (e.target.value === "Tap Repair (₹300)") setReceiptAmount("300");
+                      else if (e.target.value === "AC Service (₹500)") setReceiptAmount("500");
+                      else if (e.target.value === "Electrical (₹400)") setReceiptAmount("400");
+                      else setReceiptAmount("");
+                    }}
+                    className="w-full p-4 bg-gray-50 rounded-2xl text-sm font-bold outline-none border border-gray-100 focus:border-[#0D9488]"
+                  >
+                    <option value="">Select Category</option>
+                    <option value="Tap Repair (₹300)">Tap Repair (₹300)</option>
+                    <option value="AC Service (₹500)">AC Service (₹500)</option>
+                    <option value="Electrical (₹400)">Electrical (₹400)</option>
+                    <option value="Other">Other / Custom</option>
+                  </select>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-gray-400 uppercase ml-2 flex items-center gap-2"><IndianRupee size={12}/> Amount Paid</label>
-                  <input type="number" className="w-full p-5 bg-gray-50 rounded-2xl font-black text-emerald-600 outline-none" value={receiptAmount} onChange={(e) => setReceiptAmount(e.target.value)}/>
-                </div>
-
-                {!hasOfficialBill && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <input className="p-4 bg-gray-50 rounded-2xl text-xs font-bold outline-none" placeholder="Worker Name" value={workerName} onChange={(e) => setWorkerName(e.target.value)}/>
-                    <input className="p-4 bg-gray-50 rounded-2xl text-xs font-bold outline-none" placeholder="Phone" value={workerContact} onChange={(e) => setWorkerContact(e.target.value)}/>
+                {repairCategory === "Other" && (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-gray-400 uppercase ml-2 flex items-center gap-2"><IndianRupee size={12}/> Custom Amount</label>
+                    <input type="number" className="w-full p-4 bg-gray-50 rounded-2xl font-black text-emerald-600 outline-none focus:border-[#0D9488]" value={receiptAmount} onChange={(e) => setReceiptAmount(e.target.value)}/>
                   </div>
                 )}
 
-                <button onClick={() => startCamera("after")} className="w-full py-8 border-2 border-dashed border-gray-200 rounded-3xl flex flex-col items-center gap-2 text-gray-400 hover:text-[#0D9488] transition-all">
-                  {afterImage ? <img src={afterImage} className="h-16 w-16 object-cover rounded-xl" /> : <Camera size={32}/>}
-                  <span className="text-[10px] font-black uppercase">{afterImage ? "Evidence Secured" : "Capture Verification Photo"}</span>
-                </button>
+                <div>
+                   <label className="text-[10px] font-black text-gray-400 uppercase ml-2 mb-2 block">Payment Proof (Receipt / Bill)</label>
+                   <input type="file" accept="image/*,application/pdf" onChange={handlePaymentProofUpload} className="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100" />
+                </div>
+
+                <div className="space-y-2">
+                   <label className="text-[10px] font-black text-gray-400 uppercase ml-2 block">UPI / Bank Transaction ID</label>
+                   <input type="text" placeholder="e.g. 123456789012" className="w-full p-4 bg-gray-50 rounded-2xl text-sm font-bold outline-none border border-gray-100 focus:border-[#0D9488]" value={transactionId} onChange={(e) => setTransactionId(e.target.value)}/>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase ml-2 mb-2 block">Repaired Area Photo</label>
+                  <button onClick={() => startCamera("after")} className="w-full py-6 border-2 border-dashed border-gray-200 rounded-3xl flex flex-col items-center gap-2 text-gray-400 hover:text-[#0D9488] transition-all">
+                    {afterImage ? <img src={afterImage} className="h-16 w-16 object-cover rounded-xl" /> : <Camera size={32}/>}
+                    <span className="text-[10px] font-black uppercase">{afterImage ? "Evidence Secured" : "Capture Verification Photo"}</span>
+                  </button>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase ml-2 mb-2 block">Worker Details (Optional)</label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <input className="p-4 bg-gray-50 rounded-2xl text-xs font-bold outline-none border border-gray-100 focus:border-[#0D9488]" placeholder="Name" value={workerName} onChange={(e) => setWorkerName(e.target.value)}/>
+                    <input className="p-4 bg-gray-50 rounded-2xl text-xs font-bold outline-none border border-gray-100 focus:border-[#0D9488]" placeholder="Phone" value={workerContact} onChange={(e) => setWorkerContact(e.target.value)}/>
+                  </div>
+                </div>
+
+                {(resolvingIssue || resubmittingIssue)?.responsibility === 'tenant' && (
+                  <div className="p-4 bg-orange-50 border border-orange-100 rounded-2xl">
+                    <p className="text-xs text-orange-800 font-medium">You're completing this repair at your own cost per the threshold agreement. Submit your evidence for documentation.</p>
+                  </div>
+                )}
 
                 {resubmittingIssue && (
                   <div className="p-4 bg-orange-50 border border-orange-200 rounded-2xl">
@@ -594,17 +679,11 @@ const submitResolution = async () => {
                     <p className="text-xs text-orange-700">"{resubmittingIssue.ownerFeedback}"</p>
                   </div>
                 )}
-
-                {(resolvingIssue || resubmittingIssue)?.responsibility === 'tenant' && (
-                  <div className="p-4 bg-orange-50 border border-orange-100 rounded-2xl">
-                    <p className="text-xs text-orange-800 font-medium">You're completing this repair at your own cost per the threshold agreement. Submit your evidence for documentation.</p>
-                  </div>
-                )}
               </div>
 
-              <div className="flex gap-4 mt-12">
+              <div className="flex gap-4 mt-8">
                 <button onClick={() => { setResolvingIssue(null); setResubmittingIssue(null); }} className="flex-1 py-4 text-gray-400 font-bold text-[10px] uppercase">Cancel</button>
-                <button onClick={submitResolution} disabled={!receiptAmount || !afterImage} className="flex-[2] py-5 bg-[#1F2937] text-white rounded-3xl font-black text-xs uppercase tracking-widest shadow-2xl disabled:opacity-50">{resubmittingIssue ? "Resubmit" : "Seal & Submit"}</button>
+                <button onClick={submitResolution} disabled={!receiptAmount || !paymentProof || !transactionId || !afterImage} className="flex-[2] py-5 bg-[#1F2937] text-white rounded-3xl font-black text-xs uppercase tracking-widest shadow-2xl disabled:opacity-50">{resubmittingIssue ? "Resubmit" : "Seal & Submit"}</button>
               </div>
             </motion.div>
           </div>

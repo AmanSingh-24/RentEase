@@ -88,7 +88,20 @@ export async function GET(request: Request) {
       tempDate.setMonth(tempDate.getMonth() + 1);
     }
 
-    return NextResponse.json({ property, ledger: ledger.reverse() });
+    // 4. Fetch overall active unapplied repair credits
+    const unappliedRepairs = await Maintenance.find({
+      tenantId: session.id,
+      responsibility: "owner",
+      isAmountApproved: true,
+      isCredited: { $ne: true }
+    });
+    const totalUnappliedCredit = unappliedRepairs.reduce((sum, item) => sum + (item.finalInvoice?.amount || 0), 0);
+
+    return NextResponse.json({ 
+      property, 
+      ledger: ledger.reverse(),
+      totalUnappliedCredit
+    });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
