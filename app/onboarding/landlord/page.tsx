@@ -369,12 +369,6 @@ export default function LandlordOnboardingPage() {
           >
             <HelpCircle size={16} /> Need help?
           </button>
-          <Link
-            href="/"
-            className="px-5 py-2.5 rounded-full border border-neutral-300 text-sm font-bold text-neutral-800 hover:border-neutral-900 hover:bg-neutral-50 transition-all shadow-sm"
-          >
-            Save &amp; exit
-          </Link>
         </div>
       </header>
 
