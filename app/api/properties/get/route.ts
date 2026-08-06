@@ -12,8 +12,11 @@ export async function GET(request: Request) {
     if (!session) return NextResponse.json({ error: "Unauthorized session access" }, { status: 401 });
     if (session.role !== "owner") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    // ✅ POPULATE tenantId to get name and email
-    const properties = await Property.find({ ownerId: session.id })
+    // ✅ Fetch only approved properties that should display in owner dashboard (listingStatus: active_marketplace or occupied)
+    const properties = await Property.find({ 
+      ownerId: session.id,
+      listingStatus: { $in: ["active_marketplace", "occupied"] }
+    })
       .populate("tenantId", "name email") 
       .sort({ createdAt: -1 });
 

@@ -1,14 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   MapPin, IndianRupee, ShieldCheck, ArrowLeft, 
   Copy, Check, Share2, Building2, Calendar, User, Mail, History, UserX,
-  FileText, PenTool, CheckCircle2
+  FileText, PenTool, CheckCircle2, Phone, Sparkles, Loader2
 } from "lucide-react";
-import SignaturePad from "../../../components/SignaturePad"; // Ensure this path is correct
+import SignaturePad from "../../../components/SignaturePad"; // Path confirmed
+import dynamic from "next/dynamic";
+
+const PropertyMapComp = dynamic(() => import("../../../components/PropertyMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full bg-neutral-100 animate-pulse flex items-center justify-center min-h-[250px] rounded-xl">
+      <Loader2 size={24} className="animate-spin text-neutral-400" />
+    </div>
+  ),
+});
+
+type InfoTab = "tenant" | "history";
 
 export default function PropertyDetails() {
   const { id } = useParams();
@@ -16,6 +28,7 @@ export default function PropertyDetails() {
   const [property, setProperty] = useState<any>(null);
   const [copied, setCopied] = useState(false);
   const [isSealing, setIsSealing] = useState(false);
+  const [activeTab, setActiveTab] = useState<InfoTab>("tenant");
 
   useEffect(() => {
     fetchDetails();
@@ -26,16 +39,20 @@ export default function PropertyDetails() {
       const res = await fetch(`/api/properties/get-single?id=${id}`);
       const data = await res.json();
       if (res.ok) setProperty(data.property);
-    } catch (err) { console.error("Fetch error:", err); }
+    } catch (err) {
+      console.error("Fetch error:", err);
+    }
   };
 
   const copyCode = () => {
+    if (!property) return;
     navigator.clipboard.writeText(property.inviteCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const shareToWhatsApp = () => {
+    if (!property) return;
     const message = `Hey! Use code *${property.inviteCode}* to join the property at *${property.address}* on RentEase.`;
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
   };
@@ -49,7 +66,7 @@ export default function PropertyDetails() {
         body: JSON.stringify({ propertyId: property._id, signatureImg })
       });
       if (res.ok) {
-        await fetchDetails(); // Refresh to show the sealed status
+        await fetchDetails(); // Refresh details
       }
     } catch (err) {
       console.error("Signing error:", err);
@@ -58,152 +75,306 @@ export default function PropertyDetails() {
     }
   };
 
-  if (!property) return <div className="h-screen flex items-center justify-center font-black uppercase text-[10px] tracking-widest text-gray-300">Accessing Vault...</div>;
+  if (!property) {
+    return (
+      <div className="h-[60vh] flex items-center justify-center bg-white">
+        <div className="flex flex-col items-center gap-3">
+          <LoaderSpinner />
+          <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Accessing Property Vault...</p>
+        </div>
+      </div>
+    );
+  }
 
   const isAgreementFullySealed = property.agreement?.isSignedByTenant && property.agreement?.isSignedByOwner;
+  const imageUrls = property.listingImages && property.listingImages.length > 0 ? property.listingImages : [];
 
   return (
-    <div className="p-6 md:p-12 lg:p-16 max-w-7xl mx-auto">
-      <button onClick={() => router.push("/dashboard-owner/propertiess")} className="group flex items-center gap-2 text-gray-400 hover:text-[#1F2937] mb-12 font-bold text-xs uppercase tracking-widest transition-all">
-        <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> Back to Portfolio
+    <div className="space-y-6 pb-12">
+      {/* ── Breadcrumb back button ────────────────────────────────────────────── */}
+      <button 
+        onClick={() => router.push("/dashboard-owner/propertiess")} 
+        className="inline-flex items-center gap-2 px-4 py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 rounded-xl text-xs font-bold transition-all shadow-3xs active:scale-95 cursor-pointer border-0"
+      >
+        <ArrowLeft size={13} /> Return to Portfolio
       </button>
 
-      <div className="grid lg:grid-cols-12 gap-16">
-        {/* LEFT COLUMN: ACTIVE INFO */}
-        <div className="lg:col-span-5 space-y-12">
-          <header>
-            <div className="flex items-center gap-3 mb-6">
-              <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                property.status === 'vacant' ? 'bg-orange-50 text-orange-500' : 'bg-emerald-50 text-emerald-600'
-              }`}>{property.status.replace("_", " ")}</span>
+      {/* ── Grid Workspace Layout ───────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        {/* LEFT COLUMN: Asset parameters, invite details, and tenant tabs (5 cols) */}
+        <div className="lg:col-span-5 space-y-6">
+          
+          {/* Main Title card */}
+          <div className="bg-white rounded-2xl border border-neutral-200/80 p-5 shadow-2xs space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider border ${
+                property.status === 'vacant' ? 'bg-amber-50 text-amber-700 border-amber-200/50' : 
+                property.status === 'under_notice' ? 'bg-red-50 text-red-700 border-red-200/50 animate-pulse' :
+                'bg-emerald-50 text-emerald-700 border-emerald-200/50'
+              }`}>
+                {property.status.replace("_", " ")}
+              </span>
               
               {isAgreementFullySealed && (
-                <span className="px-4 py-1.5 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border border-blue-100">
-                  <ShieldCheck size={14} /> Legally Sealed
+                <span className="px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200/50 rounded-md text-[9px] font-black uppercase tracking-wider flex items-center gap-1">
+                  <ShieldCheck size={11} /> Legally Sealed
                 </span>
               )}
             </div>
-            <h1 className="text-4xl md:text-5xl font-black text-[#1F2937] leading-[1.1] tracking-tight">{property.address}</h1>
-          </header>
+            
+            <div>
+              <h1 className="text-xl font-extrabold text-neutral-950 tracking-tight leading-snug">
+                {property.address}
+              </h1>
+              <p className="text-xs text-neutral-500 font-semibold mt-1 flex items-center gap-1.5">
+                <MapPin size={11} /> {property.city} · {property.bhk || 1} BHK
+              </p>
+            </div>
 
-          {/* SIDEBAR CARD: RESIDENT VS INVITE */}
-          {property.tenantId ? (
-             <div className="space-y-6">
-               <div className="bg-emerald-50 border border-emerald-100 p-10 rounded-[48px] relative overflow-hidden">
-                  <div className="flex items-center gap-4 mb-8">
-                      <div className="w-16 h-16 bg-white rounded-3xl flex items-center justify-center text-emerald-500 shadow-sm"><User size={28}/></div>
-                      <div>
-                          <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em]">Current Occupant</p>
-                          <h3 className="text-2xl font-black text-emerald-900">{property.tenantId.name}</h3>
+            <div className="grid grid-cols-2 gap-2 border-t border-neutral-100 pt-4">
+              <div>
+                <p className="text-[8px] font-bold text-neutral-400 uppercase tracking-wider">Monthly Rent</p>
+                <p className="text-sm font-black text-neutral-900 mt-0.5">₹{Number(property.rentAmount || 0).toLocaleString("en-IN")}</p>
+              </div>
+              <div>
+                <p className="text-[8px] font-bold text-neutral-400 uppercase tracking-wider">Security Deposit</p>
+                <p className="text-sm font-black text-neutral-900 mt-0.5">₹{Number(property.depositAmount || 0).toLocaleString("en-IN")}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Tab Navigation: Tenant Details / Past History */}
+          <div className="bg-white rounded-2xl border border-neutral-200/80 p-5 shadow-2xs space-y-4">
+            
+            {/* Tabs Trigger bar */}
+            <div className="flex items-center gap-1.5 p-1 bg-neutral-100 rounded-xl">
+              <button
+                onClick={() => setActiveTab("tenant")}
+                className={`flex-1 py-2 rounded-lg font-bold text-xs transition-all cursor-pointer ${
+                  activeTab === "tenant" ? "bg-white text-neutral-950 shadow-xs" : "text-neutral-500 hover:text-neutral-800"
+                }`}
+              >
+                Resident Details
+              </button>
+              <button
+                onClick={() => setActiveTab("history")}
+                className={`flex-1 py-2 rounded-lg font-bold text-xs transition-all cursor-pointer ${
+                  activeTab === "history" ? "bg-white text-neutral-950 shadow-xs" : "text-neutral-500 hover:text-neutral-800"
+                }`}
+              >
+                Residency History ({property.pastTenants?.length || 0})
+              </button>
+            </div>
+
+            {/* Tab content viewports */}
+            <div className="pt-2">
+              <AnimatePresence mode="wait">
+                {activeTab === "tenant" ? (
+                  <motion.div
+                    key="tenant-tab"
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 5 }}
+                    className="space-y-4"
+                  >
+                    {property.tenantId ? (
+                      <div className="space-y-4">
+                        <div className="p-4 bg-neutral-50 rounded-xl border border-neutral-200/60 flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-neutral-900 text-white flex items-center justify-center font-black uppercase text-xs shrink-0">
+                            {property.tenantId.name?.charAt(0) || "T"}
+                          </div>
+                          <div className="space-y-1.5 min-w-0 flex-1">
+                            <div>
+                              <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider">Occupant Name</p>
+                              <p className="text-xs font-black text-neutral-950 leading-snug">{property.tenantId.name}</p>
+                            </div>
+                            
+                            {/* Contact entries placed below name */}
+                            <div className="space-y-1 text-xs text-neutral-500 font-semibold border-t border-neutral-200/50 pt-1.5 mt-1 bg-transparent">
+                              <div className="flex items-center gap-1.5">
+                                <Mail size={11} className="text-neutral-400 shrink-0" />
+                                <a href={`mailto:${property.tenantId.email}`} className="hover:underline hover:text-neutral-950 truncate block">
+                                  {property.tenantId.email}
+                                </a>
+                              </div>
+                              {property.tenantContact?.phone && (
+                                <div className="flex items-center gap-1.5 mt-0.5">
+                                  <Phone size={11} className="text-neutral-400 shrink-0" />
+                                  <a href={`tel:${property.tenantContact.phone}`} className="hover:underline hover:text-neutral-950 block">
+                                    {property.tenantContact.phone}
+                                  </a>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Seal signature section */}
+                        {property.agreement?.isSignedByTenant && !property.agreement?.isSignedByOwner && (
+                          <div className="p-4 bg-indigo-50/50 border border-indigo-200/50 rounded-xl space-y-3">
+                            <div className="flex items-center gap-2">
+                              <PenTool size={14} className="text-indigo-600 shrink-0" />
+                              <p className="text-[10px] font-black uppercase text-indigo-700 tracking-wider">Action: Counter-Sign Lease</p>
+                            </div>
+                            <SignaturePad onSave={handleOwnerSign} />
+                          </div>
+                        )}
                       </div>
+                    ) : (
+                      // Unassigned: Show invite code portal
+                      <div className="space-y-4 text-center py-6 bg-neutral-50 rounded-xl border border-neutral-200/60 border-dashed">
+                        <div className="max-w-xs mx-auto space-y-3 px-4">
+                          <Sparkles size={24} className="text-neutral-400 mx-auto" />
+                          <h4 className="text-xs font-black text-neutral-900 uppercase tracking-wider">Unassigned Vacant Asset</h4>
+                          <p className="text-[11px] text-neutral-400 font-medium">Provide this invite code to your verified tenant to start onboarding:</p>
+                          
+                          <div className="flex items-center justify-between bg-white px-4 py-3 rounded-xl border border-neutral-200 font-mono text-lg font-black tracking-widest text-neutral-950 shadow-3xs uppercase">
+                            <span>{property.inviteCode}</span>
+                            <button onClick={copyCode} className="text-neutral-400 hover:text-neutral-950 cursor-pointer">
+                              {copied ? <Check size={14} className="text-emerald-600"/> : <Copy size={14}/>}
+                            </button>
+                          </div>
+
+                          <button 
+                            onClick={shareToWhatsApp} 
+                            className="w-full py-2 bg-neutral-950 hover:bg-black text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                          >
+                            <Share2 size={13} /> Share WhatsApp Invite
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="history-tab"
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 5 }}
+                    className="space-y-2"
+                  >
+                    {property.pastTenants?.length > 0 ? (
+                      property.pastTenants.map((past: any, idx: number) => (
+                        <div key={idx} className="p-3.5 bg-neutral-50 rounded-xl border border-neutral-200/50 flex justify-between items-center opacity-85 hover:opacity-100 transition-opacity">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-8 h-8 bg-neutral-200 text-neutral-700 rounded-lg flex items-center justify-center font-black uppercase text-xs shrink-0">
+                              <UserX size={14} />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-extrabold text-neutral-900 truncate leading-snug">{past.name}</p>
+                              <p className="text-[9px] text-neutral-400 font-semibold truncate">{past.email}</p>
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="text-[8px] font-bold text-neutral-400 uppercase tracking-wider">Moved out</p>
+                            <p className="text-[10px] font-bold text-neutral-600 mt-0.5">{new Date(past.movedOutAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-8 text-center text-neutral-400">
+                        <p className="text-[10px] font-black uppercase tracking-wider">No Previous Tenancies</p>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN: Property gallery, single map location pin, and Baseline evidence photos (7 cols) */}
+        <div className="lg:col-span-7 space-y-6">
+          {/* Leaflet Property Location Map */}
+          <div className="bg-white rounded-2xl border border-neutral-200/80 p-5 shadow-2xs space-y-3">
+            <h3 className="text-xs font-black uppercase tracking-wider text-neutral-400">
+              Property Location Map
+            </h3>
+            <div className="h-64 rounded-xl overflow-hidden border border-neutral-200/60 shadow-3xs relative">
+              {property.location?.coordinates && property.location.coordinates.length === 2 ? (
+                <PropertyMapComp 
+                  lat={property.location.coordinates[1]} 
+                  lng={property.location.coordinates[0]} 
+                  address={property.address} 
+                />
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center bg-neutral-50 text-neutral-400">
+                  <MapPin size={24} className="opacity-60 mb-1" />
+                  <p className="text-[10px] font-black uppercase tracking-wider">No Geolocation Coordinates available</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Property Gallery */}
+          <div className="bg-white rounded-2xl border border-neutral-200/80 p-5 shadow-2xs space-y-5">
+            <div className="flex justify-between items-center border-b border-neutral-100 pb-3">
+              <h3 className="text-xs font-black uppercase tracking-wider text-neutral-400">
+                Asset Gallery & Listing Images
+              </h3>
+              <span className="bg-neutral-100 border border-neutral-200/30 text-neutral-800 text-[10px] font-black px-2.5 py-0.5 rounded-full">
+                {imageUrls.length} Photos
+              </span>
+            </div>
+
+            {imageUrls.length === 0 ? (
+              <div className="h-48 rounded-xl bg-neutral-50 border border-neutral-200/40 border-dashed flex flex-col items-center justify-center text-center">
+                <Building2 size={28} className="text-neutral-300 mb-2" />
+                <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest">No listing images available</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {imageUrls.map((url: string, i: number) => (
+                  <div key={i} className="relative aspect-video rounded-xl overflow-hidden border border-neutral-200/60 shadow-3xs group">
+                    <img 
+                      src={url} 
+                      alt={`Listing ${i}`} 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                    />
                   </div>
-                  <div className="space-y-3">
-                      <div className="flex items-center gap-3 text-sm font-medium text-emerald-800/60"><Mail size={16}/> {property.tenantId.email}</div>
-                      <div className="flex items-center gap-3 text-sm font-medium text-emerald-800/60"><IndianRupee size={16}/> ₹{property.rentAmount.toLocaleString()}/mo</div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Condition audit logs if exists */}
+          {property.images && property.images.length > 0 && (
+            <div className="bg-white rounded-2xl border border-neutral-200/80 p-5 shadow-2xs space-y-5">
+              <div className="flex justify-between items-center border-b border-neutral-100 pb-3">
+                <h3 className="text-xs font-black uppercase tracking-wider text-neutral-400">
+                  Digital Audit Baseline Evidence
+                </h3>
+                <span className="bg-emerald-50 border border-emerald-200/50 text-emerald-700 text-[10px] font-black px-2.5 py-0.5 rounded-full">
+                  {property.images.length} Evidence Verified
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {property.images.map((img: any, i: number) => (
+                  <div key={i} className="relative aspect-[4/3] rounded-xl overflow-hidden border border-neutral-200/60 shadow-3xs group">
+                    <img src={img.url} alt="Evidence photo" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4">
+                      <p className="text-[10px] font-bold text-white uppercase tracking-wider">Move-In Proof Item</p>
+                      <p className="text-[9px] text-neutral-300 font-semibold mt-0.5">Timestamp: {new Date(img.timestamp).toLocaleDateString("en-IN")}</p>
+                    </div>
                   </div>
-                  <div className="absolute top-[-10%] right-[-10%] w-32 h-32 bg-emerald-200/40 blur-[50px] rounded-full" />
-               </div>
-
-               {/* ✅ OWNER SIGNATURE SECTION (Action Required) */}
-               {property.agreement?.isSignedByTenant && !property.agreement?.isSignedByOwner && (
-                 <motion.div 
-                   initial={{ opacity: 0, scale: 0.9 }} 
-                   animate={{ opacity: 1, scale: 1 }}
-                   className="p-8 bg-blue-50 border-2 border-dashed border-blue-200 rounded-[48px] space-y-6"
-                 >
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
-                        <PenTool size={22} />
-                      </div>
-                      <div>
-                        <h4 className="text-lg font-black text-blue-900">Seal Agreement</h4>
-                        <p className="text-xs text-blue-500 font-bold uppercase tracking-wider">Tenant has signed • Action Required</p>
-                      </div>
-                    </div>
-                    
-                    <SignaturePad onSave={handleOwnerSign} />
-                    
-                    <p className="text-[9px] text-blue-400 text-center font-bold uppercase tracking-tighter">
-                      Counter-signing will finalize the blockchain hash and lock the legal vault.
-                    </p>
-                 </motion.div>
-               )}
-
-               {/* ✅ SHOW SEALED CONFIRMATION */}
-               {isAgreementFullySealed && (
-                 <div className="p-8 bg-white border border-gray-100 rounded-[40px] flex items-center justify-between shadow-sm">
-                    <div className="flex items-center gap-4">
-                      <CheckCircle2 size={24} className="text-emerald-500" />
-                      <div>
-                        <p className="text-xs font-black uppercase tracking-widest text-gray-400">Legal Status</p>
-                        <p className="text-sm font-bold text-gray-800">Agreement Fully Executed</p>
-                      </div>
-                    </div>
-                    <button className="p-4 text-blue-600 bg-blue-50 rounded-2xl hover:bg-blue-600 hover:text-white transition-all">
-                      <FileText size={20} />
-                    </button>
-                 </div>
-               )}
-             </div>
-          ) : (
-            <div className="bg-[#1F2937] p-10 rounded-[48px] text-white shadow-2xl relative overflow-hidden">
-                <h3 className="text-xl font-bold mb-2">Find Next Tenant</h3>
-                <p className="text-gray-400 text-sm mb-10 leading-relaxed">This property is ready for occupancy. Provide this code to the new resident.</p>
-                <div className="flex items-center justify-between bg-white/5 p-6 rounded-3xl border border-white/10 mb-8 font-mono font-black tracking-[0.3em] text-3xl uppercase text-center">{property.inviteCode} <button onClick={copyCode}>{copied ? <Check className="text-emerald-400"/> : <Copy className="text-gray-500"/>}</button></div>
-                <button onClick={shareToWhatsApp} className="w-full py-5 bg-[#0052CC] text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-3 active:scale-95 transition-all"><Share2 size={18} /> Send WhatsApp Invite</button>
+                ))}
+              </div>
             </div>
           )}
-
-          {/* OCCUPANCY HISTORY SECTION */}
-          <section className="space-y-6 pt-4">
-            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] ml-2 flex items-center gap-2">
-                <History size={14}/> Residency History
-            </h4>
-            {property.pastTenants?.length > 0 ? (
-                <div className="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
-                    {property.pastTenants.map((past: any, idx: number) => (
-                        <div key={idx} className="bg-white border border-gray-50 p-6 rounded-[32px] flex justify-between items-center opacity-60 hover:opacity-100 transition-all">
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400"><UserX size={20}/></div>
-                                <div>
-                                    <p className="text-sm font-bold text-gray-700">{past.name}</p>
-                                    <p className="text-[10px] text-gray-400 font-medium">{past.email}</p>
-                                </div>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-[8px] font-black text-gray-300 uppercase mb-1">Moved Out</p>
-                                <p className="text-xs font-bold text-gray-400">{new Date(past.movedOutAt).toLocaleDateString()}</p>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            ) : (
-                <div className="p-8 border-2 border-dashed border-gray-50 rounded-[40px] text-center">
-                    <p className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">No Previous Tenants recorded</p>
-                </div>
-            )}
-          </section>
-        </div>
-
-        {/* RIGHT COLUMN: GALLERY */}
-        <div className="lg:col-span-7">
-            <div className="flex items-center justify-between mb-8 px-4">
-                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">Baseline Evidence</h4>
-                <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-4 py-1.5 rounded-full">{property.images?.length || 0} Photos Locked</span>
-            </div>
-            <div className="grid grid-cols-2 gap-6">
-                {property.images?.map((img: any, i: number) => (
-                    <div key={i} className="relative aspect-[4/3] rounded-[48px] overflow-hidden border border-gray-100 shadow-md group">
-                        <img src={img.url} alt="Evidence" className="w-full h-full object-cover group-hover:scale-110 transition-all duration-700" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-8">
-                            <p className="text-[10px] font-black text-white uppercase tracking-widest mb-1">Digital Baseline Proof</p>
-                            <p className="text-[9px] text-white/60 uppercase font-bold tracking-tighter">Timestamp: {new Date(img.timestamp).toLocaleDateString()}</p>
-                        </div>
-                    </div>
-                ))}
-            </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Inline fallback loader icon
+function LoaderSpinner() {
+  return (
+    <div className="relative w-8 h-8 animate-spin">
+      <div className="absolute inset-0 border-2 border-neutral-200 rounded-full"></div>
+      <div className="absolute inset-0 border-2 border-t-neutral-950 rounded-full"></div>
     </div>
   );
 }

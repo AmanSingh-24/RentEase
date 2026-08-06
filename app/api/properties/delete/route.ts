@@ -28,6 +28,14 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // 🔒 DELISTING LOCK: Reject if the property is currently occupied
+    if (property.status === "occupied") {
+      return NextResponse.json(
+        { error: "Delisting locked: This property has an active tenancy in progress. Please process exit procedures first." },
+        { status: 400 }
+      );
+    }
+
     const deletedProperty = await Property.findByIdAndDelete(id);
 
     if (!deletedProperty) {
