@@ -146,7 +146,7 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
         />
 
         {/* Main Viewport Content */}
-        <main className="flex-1 bg-white p-6 md:p-10 min-w-0">
+        <main className="flex-1 bg-white p-4 md:p-6 lg:p-8 min-w-0">
           {children}
         </main>
       </div>

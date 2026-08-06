@@ -46,6 +46,36 @@ export async function PUT(request: Request) {
       category: action === "verify" ? "legal" : "system"
     });
 
+    // 4. Send Email Notification regarding Verification decision
+    try {
+      const User = (await import("@/models/User")).default;
+      const tenantUser = await User.findById(updatedInspection.tenantId);
+      const property = await Property.findById(updatedInspection.propertyId);
+      
+      if (tenantUser?.email && property) {
+        if (action === "verify") {
+          // Dynamic import of Resend helper
+          const { sendTenantFinalApprovalEmail } = await import("@/lib/email");
+          sendTenantFinalApprovalEmail(
+            tenantUser.email,
+            tenantUser.name || "Tenant",
+            property.address
+          ).catch((err) => console.error("Final approval verification email failed:", err));
+        } else {
+          // Send reject/retake notification email helper if exists
+          const { sendOwnerApplicationDecisionEmail } = await import("@/lib/email");
+          sendOwnerApplicationDecisionEmail(
+            tenantUser.email,
+            tenantUser.name || "Tenant",
+            property.address,
+            "rejected"
+          ).catch((err) => console.error("Final rejection verification email failed:", err));
+        }
+      }
+    } catch (emailErr) {
+      console.error("Failed sending email notification during inspection action:", emailErr);
+    }
+
     return NextResponse.json({ 
       message: `Vault ${status}`, 
       status: updatedInspection.status 

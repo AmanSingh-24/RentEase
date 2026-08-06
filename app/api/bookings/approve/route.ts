@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     if (session.role !== "owner")
       return NextResponse.json({ error: "Owner access required" }, { status: 403 });
 
-    const { propertyId } = await request.json();
+    const { propertyId, ownerSignature } = await request.json();
     if (!propertyId) return NextResponse.json({ error: "propertyId is required" }, { status: 400 });
 
     const property = await Property.findById(propertyId);
@@ -41,11 +41,12 @@ export async function POST(request: Request) {
       isOnboarded: true,
     });
 
-    // Mark property as occupied
+    // Mark property as occupied and save ownerSignature
     await Property.findByIdAndUpdate(propertyId, {
       status: "occupied",
       listingStatus: "occupied", // Remove from marketplace
       "agreement.isSignedByOwner": true,
+      "agreement.ownerSignature": ownerSignature || "", // Store drawn signature representation
       leaseStartDate: new Date(),
     });
 

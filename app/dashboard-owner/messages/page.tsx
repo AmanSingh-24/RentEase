@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { io } from "socket.io-client";
 import { 
   Send, Loader2, Megaphone, User, Building, 
-  ChevronRight, MessageSquare, X, History, Radio 
+  ChevronRight, MessageSquare, X, History, Radio, ArrowLeft
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -152,154 +152,199 @@ export default function OwnerMessagesPage() {
     // Smooth delay for database write before refreshing history logs
     setTimeout(async () => {
       await fetchBroadcastHistory();
-      alert("📢 Announcement broadcasted to all active units and added to logs.");
     }, 800);
   };
 
-  if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-blue-600" size={40} /></div>;
+  if (loading) {
+    return (
+      <div className="h-[calc(100vh-140px)] flex items-center justify-center bg-white">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="animate-spin text-neutral-950" size={32} />
+          <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Hydrating Inbox Feed...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 p-10 max-w-7xl mx-auto h-[calc(100vh-8px)] overflow-hidden relative">
+    <div className="flex bg-white rounded-2xl border border-neutral-200/80 h-[calc(100vh-150px)] overflow-hidden shadow-2xs">
       
-      {/* LEFT COLUMN: CHAT PANEL SYSTEM FEEDS */}
-      <div className="lg:col-span-1 flex flex-col h-full gap-6 overflow-hidden">
+      {/* ── LEFT COLUMN: Conversational Feed / Broadcasting ────────────────── */}
+      <div className={`w-full lg:w-96 flex flex-col border-r border-neutral-200/80 bg-white ${activeChat || selectedBroadcast ? "hidden lg:flex" : "flex"}`}>
         
-        <div className="flex-1 bg-white rounded-[40px] border border-gray-100 p-6 flex flex-col overflow-hidden shadow-sm">
-          
-          {/* WHATSAPP-STYLE TAB HEADERS CONTROL ENGINE */}
-          <div className="grid grid-cols-2 gap-2 p-1.5 bg-gray-50 rounded-2xl mb-6">
+        {/* WhatsApp-Style Toggle tabs */}
+        <div className="p-4 border-b border-neutral-100 space-y-4">
+          <div className="grid grid-cols-2 gap-1.5 p-1 bg-neutral-100 rounded-xl">
             <button 
               onClick={() => { setLeftTab("chats"); closeActiveWorkspace(); }}
-              className={`py-3 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
-                leftTab === "chats" ? "bg-white text-blue-600 shadow-sm" : "text-gray-400 hover:text-gray-600"
+              className={`py-2 rounded-lg font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                leftTab === "chats" ? "bg-white text-neutral-950 shadow-xs" : "text-neutral-500 hover:text-neutral-800"
               }`}
             >
-              <MessageSquare size={14}/> Direct Chats
+              <MessageSquare size={13}/> Direct Inbox
             </button>
             <button 
               onClick={() => { setLeftTab("history"); closeActiveWorkspace(); }}
-              className={`py-3 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
-                leftTab === "history" ? "bg-white text-blue-600 shadow-sm" : "text-gray-400 hover:text-gray-600"
+              className={`py-2 rounded-lg font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                leftTab === "history" ? "bg-white text-neutral-950 shadow-xs" : "text-neutral-500 hover:text-neutral-800"
               }`}
             >
-              <History size={14}/> Broadcast Logs
+              <History size={13}/> Sent Alerts
             </button>
           </div>
+        </div>
 
-          {/* DYNAMIC LIST VIEWER INTERFACES */}
-          <div className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-none">
-            <AnimatePresence mode="wait">
-              {leftTab === "chats" ? (
-                <motion.div key="chats-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
-                  {roster.map((node, i) => {
+        {/* Dynamic List Container */}
+        <div className="flex-1 overflow-y-auto divide-y divide-neutral-100 pr-1">
+          <AnimatePresence mode="wait">
+            {leftTab === "chats" ? (
+              <motion.div key="chats-list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                {roster.length === 0 ? (
+                  <div className="p-8 text-center text-neutral-400">
+                    <User size={28} className="mx-auto mb-2 opacity-30" />
+                    <p className="text-xs font-bold">No active tenancies linked</p>
+                  </div>
+                ) : (
+                  roster.map((node, i) => {
                     const isSelected = activeChat?.propertyId._id === node.propertyId._id;
                     const hasUnread = unreadRooms.includes(node.propertyId._id);
 
                     return (
-                      <div 
+                      <button
                         key={i} 
                         onClick={() => selectConversation(node)}
-                        className={`p-5 rounded-[24px] border transition-all duration-200 cursor-pointer flex items-center justify-between group relative ${
-                          isSelected ? 'bg-gray-50 border-gray-100 shadow-inner scale-[0.99]' : 'bg-white border-transparent hover:bg-gray-50/50'
+                        className={`w-full p-4 flex items-center justify-between text-left transition-all border-l-4 cursor-pointer ${
+                          isSelected 
+                            ? 'bg-neutral-50 border-neutral-950 font-bold' 
+                            : 'border-transparent hover:bg-neutral-50/50'
                         }`}
                       >
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 bg-blue-50 text-blue-600 font-black rounded-xl flex items-center justify-center text-xs uppercase">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-9 h-9 bg-neutral-900 text-white font-black rounded-lg flex items-center justify-center text-xs uppercase shrink-0">
                             {node.tenantId?.name?.charAt(0) || "T"}
                           </div>
-                          <div>
-                            <h4 className="font-black text-sm text-gray-800 uppercase tracking-tight flex items-center gap-2">
-                              {node.tenantId?.name}
-                              {hasUnread && <span className="w-2.5 h-2.5 bg-rose-500 rounded-full animate-pulse shadow-sm" />}
+                          <div className="min-w-0">
+                            <h4 className="font-extrabold text-xs text-neutral-900 flex items-center gap-1.5 leading-snug">
+                              <span className="truncate">{node.tenantId?.name}</span>
+                              {hasUnread && <span className="w-2 h-2 bg-indigo-600 rounded-full animate-pulse shrink-0" />}
                             </h4>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-1 flex items-center gap-1">
-                              <Building size={11}/> {node.propertyId?.address?.split(',')[0]}
+                            <p className="text-[10px] font-semibold text-neutral-400 flex items-center gap-1 mt-0.5 truncate">
+                              <Building size={10} className="shrink-0" /> {node.propertyId?.address}
                             </p>
                           </div>
                         </div>
-                        <ChevronRight size={16} className={`text-gray-300 transition-transform ${isSelected ? 'translate-x-1 text-blue-600' : 'group-hover:translate-x-0.5'}`} />
-                      </div>
+                        <ChevronRight size={14} className={`text-neutral-300 ${isSelected ? "text-neutral-950 translate-x-0.5" : ""}`} />
+                      </button>
                     );
-                  })}
-                </motion.div>
-              ) : (
-                <motion.div key="history-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
-                  {broadcastLog.map((b, i) => {
+                  })
+                )}
+              </motion.div>
+            ) : (
+              <motion.div key="history-list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-3 space-y-2">
+                {broadcastLog.length === 0 ? (
+                  <div className="p-8 text-center text-neutral-400">
+                    <Megaphone size={28} className="mx-auto mb-2 opacity-30" />
+                    <p className="text-xs font-bold">No broadcast alerts dispatched</p>
+                  </div>
+                ) : (
+                  broadcastLog.map((b, i) => {
                     const isSelected = selectedBroadcast?._id === b._id;
                     return (
-                      <div 
+                      <button 
                         key={i}
                         onClick={() => { setActiveChat(null); setSelectedBroadcast(b); }}
-                        className={`p-5 rounded-[24px] border transition-all cursor-pointer flex flex-col gap-2 ${
-                          isSelected ? "bg-orange-50/50 border-orange-100 shadow-inner" : "bg-white border-transparent hover:bg-gray-50"
+                        className={`w-full p-4 rounded-xl border transition-all text-left flex flex-col gap-2 cursor-pointer ${
+                          isSelected ? "bg-neutral-50 border-neutral-300" : "bg-white border-neutral-200/60 hover:bg-neutral-50/50"
                         }`}
                       >
-                        <div className="flex justify-between items-center">
-                          <span className="text-[8px] font-black uppercase tracking-widest text-orange-600 bg-orange-100/50 px-2 py-0.5 rounded-full flex items-center gap-1"><Radio size={8}/> Broadcasted</span>
-                          <span className="text-[9px] font-bold text-gray-400">{new Date(b.createdAt).toLocaleDateString()}</span>
+                        <div className="flex justify-between items-center w-full">
+                          <span className="text-[8px] font-black uppercase tracking-wider text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-md flex items-center gap-1"><Radio size={8}/> Broadcasted</span>
+                          <span className="text-[9px] font-bold text-neutral-400">{new Date(b.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
                         </div>
-                        <p className="text-xs font-bold text-gray-700 line-clamp-2 leading-relaxed">{b.messageText}</p>
-                      </div>
+                        <p className="text-xs font-bold text-neutral-700 line-clamp-2 leading-relaxed">{b.messageText}</p>
+                      </button>
                     );
-                  })}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+                  })
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
-        {/* FIXED BOTTOM MASS BROADCAST INTERACTIVE DECK */}
-        <div className="bg-white border border-gray-100 rounded-[32px] p-6 shadow-sm">
-          <div className="flex items-center gap-2 mb-4">
-             <Megaphone className="text-blue-500" size={16}/>
-             <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Mass Broadcast Terminal</span>
+        {/* Global Bulletin Alert Drawer */}
+        <div className="p-4 border-t border-neutral-100 bg-neutral-50/50">
+          <div className="flex items-center gap-1.5 mb-3">
+             <Megaphone className="text-neutral-500" size={14}/>
+             <span className="text-[9px] font-bold uppercase tracking-wider text-neutral-400">Tenant Broadcast Terminal</span>
           </div>
-          <form onSubmit={handleBroadcastSubmit} className="space-y-3">
+          <form onSubmit={handleBroadcastSubmit} className="space-y-2">
              <input 
                type="text"
                value={broadcastText}
                onChange={(e) => setBroadcastText(e.target.value)}
                placeholder="Type global bulletin update..."
-               className="w-full p-4 bg-gray-50 border border-transparent focus:bg-white focus:border-blue-100 rounded-xl outline-none font-medium text-xs shadow-inner"
+               className="w-full px-3 py-2.5 bg-white border border-neutral-200 focus:border-neutral-900 rounded-xl outline-none font-semibold text-xs transition-all shadow-3xs"
              />
              <button 
                type="submit"
                disabled={broadcasting || !broadcastText.trim() || roster.length === 0}
-               className="w-full py-4 bg-blue-600 text-white font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-black transition-all shadow-md"
+               className="w-full py-2.5 bg-neutral-950 hover:bg-black text-white font-bold text-xs rounded-xl transition-all shadow-xs disabled:opacity-40 cursor-pointer"
              >
-                {broadcasting ? "Transmitting..." : "Dispatch Broadcast Alert"}
+                {broadcasting ? "Dispatching..." : "Send Global Broadcast Alert"}
              </button>
           </form>
         </div>
       </div>
 
-      {/* RIGHT COLUMN: INTERACTION THREAD SYSTEM VIEWPORTS */}
-      <div className="lg:col-span-2 bg-white rounded-[40px] border border-gray-100 h-full flex flex-col overflow-hidden relative shadow-sm">
+      {/* ── RIGHT COLUMN: Interactive Conversation Threads ────────────────── */}
+      <div className={`flex-1 bg-white h-full flex flex-col overflow-hidden relative ${!activeChat && !selectedBroadcast ? "hidden lg:flex" : "flex"}`}>
         {activeChat ? (
-          <>
-            <header className="p-6 bg-gray-50/30 border-b border-gray-50 flex items-center justify-between">
-               <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-[#1F2937] text-white rounded-2xl flex items-center justify-center font-black text-sm uppercase">
+          <div className="flex flex-col h-full justify-between">
+            {/* Header info */}
+            <header className="p-4 border-b border-neutral-100 flex items-center justify-between bg-neutral-50/40">
+               <div className="flex items-center gap-3">
+                  {/* Mobile Back button */}
+                  <button 
+                    onClick={closeActiveWorkspace}
+                    className="p-1.5 rounded-lg hover:bg-neutral-200 text-neutral-600 lg:hidden cursor-pointer mr-1"
+                    title="Back to inbox"
+                  >
+                    <ArrowLeft size={16} />
+                  </button>
+
+                  <div className="w-10 h-10 bg-neutral-900 text-white rounded-lg flex items-center justify-center font-black text-sm uppercase shrink-0">
                     {activeChat.tenantId?.name?.charAt(0) || "T"}
                   </div>
-                  <div>
-                     <h3 className="font-black text-base text-[#1F2937] uppercase tracking-tight">{activeChat.tenantId?.name}</h3>
-                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{activeChat.propertyId?.address}</p>
+                  <div className="min-w-0">
+                     <h3 className="font-extrabold text-xs text-neutral-950 truncate leading-snug">{activeChat.tenantId?.name}</h3>
+                     <p className="text-[10px] text-neutral-400 font-semibold truncate flex items-center gap-1 mt-0.5">
+                       <Building size={10} className="shrink-0" /> {activeChat.propertyId?.address}
+                     </p>
                   </div>
                </div>
-               <button onClick={closeActiveWorkspace} className="p-3 bg-white text-gray-400 hover:text-red-500 rounded-full border shadow-sm transition-all"><X size={18} /></button>
+               
+               <button 
+                 onClick={closeActiveWorkspace} 
+                 className="p-2 bg-white text-neutral-400 hover:text-neutral-800 rounded-xl border border-neutral-200 shadow-3xs transition-all cursor-pointer hidden lg:block"
+                 title="Close Chat"
+               >
+                 <X size={15} />
+               </button>
             </header>
 
-            <div className="flex-1 overflow-y-auto p-8 space-y-4 max-h-[calc(100vh-280px)] scrollbar-none bg-gray-50/10">
+            {/* Conversation Log messages */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-4 max-h-[calc(100vh-320px)] bg-neutral-50/20">
                {messages.map((m, idx) => {
                  const isMe = m.senderId === owner._id;
                  return (
                   <div key={idx} className={`flex ${isMe ? "justify-end" : "justify-start"} animate-in fade-in duration-200`}>
-                     <div className={`max-w-[70%] p-5 rounded-[24px] shadow-sm relative ${
-                       isMe ? "bg-blue-600 text-white rounded-br-sm" : "bg-white border border-gray-100 text-gray-800 rounded-bl-sm"
+                     <div className={`max-w-[70%] p-4 rounded-2xl shadow-3xs relative leading-relaxed ${
+                       isMe 
+                         ? "bg-neutral-950 text-white rounded-tr-xs" 
+                         : "bg-white border border-neutral-200 text-neutral-800 rounded-tl-xs"
                      }`}>
-                        <p className="text-sm font-medium leading-relaxed break-words">{m.messageText}</p>
-                        <span className="text-[8px] font-black block mt-2 text-right uppercase tracking-wider opacity-40">
+                        <p className="text-xs font-semibold leading-normal break-words">{m.messageText}</p>
+                        <span className="text-[8px] font-bold block mt-1.5 text-right uppercase tracking-wide opacity-50">
                           {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                      </div>
@@ -309,40 +354,66 @@ export default function OwnerMessagesPage() {
                <div ref={endRef} />
             </div>
 
-            <form onSubmit={handleSend} className="p-6 border-t border-gray-50 bg-white flex gap-4 absolute bottom-0 inset-x-0">
+            {/* Bottom input area */}
+            <form onSubmit={handleSend} className="p-4 border-t border-neutral-100 bg-white flex gap-3">
                <input 
                  type="text" 
                  value={inputText}
                  onChange={(e) => setInputText(e.target.value)}
                  placeholder="Type your outbound message reply..."
-                 className="flex-1 p-5 bg-gray-50 rounded-2xl outline-none text-sm font-bold border border-transparent focus:bg-white focus:border-blue-100 shadow-inner"
+                 className="flex-1 px-4 py-3 bg-neutral-50 border border-neutral-200 rounded-xl outline-none text-xs font-semibold focus:bg-white focus:border-neutral-950 shadow-3xs"
                />
-               <button type="submit" disabled={!inputText.trim()} className="p-5 bg-[#1F2937] text-white rounded-2xl hover:bg-black disabled:opacity-20 shadow-md flex items-center justify-center"><Send size={18}/></button>
+               <button 
+                 type="submit" 
+                 disabled={!inputText.trim()} 
+                 className="p-3 bg-neutral-950 text-white rounded-xl hover:bg-black disabled:opacity-20 shadow-xs flex items-center justify-center cursor-pointer shrink-0 transition-colors"
+               >
+                 <Send size={15}/>
+               </button>
             </form>
-          </>
+          </div>
         ) : selectedBroadcast ? (
-          /* 📢 DISPLAY TERMINAL PANEL: PAST SENT BROADCAST EXPANSION LOG DETAILS */
-          <div className="p-12 space-y-6 h-full bg-gray-50/10 overflow-y-auto relative animate-in fade-in duration-200">
-            <div className="flex justify-between items-start border-b border-gray-100 pb-6">
+          /* Broadcast Delivery View */
+          <div className="p-8 space-y-6 h-full bg-neutral-50/10 overflow-y-auto relative animate-in fade-in duration-200">
+            <div className="flex justify-between items-start border-b border-neutral-100 pb-4">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-500 shadow-inner"><Megaphone size={20}/></div>
+                {/* Mobile Back button */}
+                <button 
+                  onClick={closeActiveWorkspace}
+                  className="p-1.5 rounded-lg hover:bg-neutral-200 text-neutral-600 lg:hidden cursor-pointer mr-1"
+                  title="Back to sent alerts"
+                >
+                  <ArrowLeft size={16} />
+                </button>
+
+                <div className="w-10 h-10 bg-indigo-50 border border-indigo-100 text-indigo-700 rounded-xl flex items-center justify-center shrink-0 shadow-3xs"><Megaphone size={16}/></div>
                 <div>
-                  <h3 className="font-black text-lg text-gray-800 tracking-tight">Broadcast Delivery Report</h3>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Dispatched: {new Date(selectedBroadcast.createdAt).toLocaleString()}</p>
+                  <h3 className="font-extrabold text-sm text-neutral-900 tracking-tight">Broadcast Delivery Report</h3>
+                  <p className="text-[10px] text-neutral-400 font-semibold mt-0.5">Dispatched: {new Date(selectedBroadcast.createdAt).toLocaleString("en-IN")}</p>
                 </div>
               </div>
-              <button onClick={closeActiveWorkspace} className="p-3 bg-white text-gray-400 hover:text-black rounded-full border shadow-sm transition-all"><X size={16}/></button>
+              
+              <button 
+                onClick={closeActiveWorkspace} 
+                className="p-2 bg-white text-neutral-400 hover:text-neutral-800 rounded-xl border border-neutral-200 shadow-3xs transition-all cursor-pointer hidden lg:block"
+                title="Close Report"
+              >
+                <X size={15}/>
+              </button>
             </div>
-            <div className="p-8 bg-white rounded-[28px] border border-gray-100 shadow-sm space-y-4">
-               <span className="text-[9px] font-black uppercase text-orange-600 tracking-widest block">Message Payload Content</span>
-               <p className="text-sm font-bold text-gray-700 leading-relaxed break-words bg-gray-50/50 p-6 rounded-2xl border border-gray-50">{selectedBroadcast.messageText}</p>
+            
+            <div className="p-6 bg-white rounded-2xl border border-neutral-200/80 shadow-3xs space-y-4">
+               <span className="text-[9px] font-black uppercase text-indigo-700 tracking-wider block">Message Payload Content</span>
+               <p className="text-xs font-semibold text-neutral-700 leading-relaxed break-words bg-neutral-50/50 p-5 rounded-xl border border-neutral-200/40">{selectedBroadcast.messageText}</p>
             </div>
           </div>
         ) : (
-          <div className="h-full flex flex-col items-center justify-center text-center text-gray-300">
-            <MessageSquare size={48} className="mb-4 opacity-30 animate-pulse"/>
-            <h4 className="text-sm font-black uppercase tracking-[0.2em] text-gray-400 mb-1">No Active Conversational Feed</h4>
-            <p className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">Select an active context item card link from the left tracker column map.</p>
+          <div className="h-full flex flex-col items-center justify-center text-center p-6">
+            <MessageSquare size={36} className="text-neutral-300 mb-3 opacity-80"/>
+            <h4 className="text-xs font-black uppercase tracking-wider text-neutral-400 mb-1">No conversation selected</h4>
+            <p className="text-[10px] text-neutral-400 font-semibold max-w-xs">
+              Select an active Direct Inbox thread or review sent alerts from the left sidebar feed.
+            </p>
           </div>
         )}
       </div>

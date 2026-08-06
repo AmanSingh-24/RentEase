@@ -16,11 +16,20 @@ export async function GET(request: Request) {
     const properties = await Property.find({ ownerId: session.id }).select("_id");
     const propertyIds = properties.map(p => p._id);
 
-    // 2. Find all pending inspections for those properties
-    const inspections = await Inspection.find({ 
-      propertyId: { $in: propertyIds },
-      status: "pending" 
-    }).populate("tenantId", "name email").populate("propertyId", "address");
+    // 2. Read status query param (default to pending)
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get("status") || "pending";
+
+    // 3. Find inspections matching criteria
+    const query: any = { propertyId: { $in: propertyIds } };
+    if (status !== "all") {
+      query.status = status;
+    }
+
+    const inspections = await Inspection.find(query)
+      .populate("tenantId", "name email")
+      .populate("propertyId", "address")
+      .sort({ createdAt: -1 });
 
     return NextResponse.json({ inspections }, { status: 200 });
   } catch (error: any) {

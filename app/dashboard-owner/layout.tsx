@@ -7,22 +7,24 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { 
   LayoutGrid, Building2, Wrench, ShieldCheck, IndianRupee, 
-  Settings, LogOut, PlusCircle, X, Plus, MessageSquare, LayoutTemplate, ClipboardList, UserCheck, Menu
+  Settings, LogOut, PlusCircle, X, Plus, MessageSquare, LayoutTemplate, ClipboardList, UserCheck, Menu, FileText, BarChart3
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PropertyProvider, useProperty } from "../context/PropertyContext";
 import AddressMapPicker, { type GeoLocation } from "../components/AddressMapPicker";
 
-// ✅ ADDED MESSAGES TO THE CORE PORFOLIO HUB NAVIGATION MATRIX
-const ownerNavItems = [
-  { name: "Portfolio", href: "/dashboard-owner", icon: LayoutGrid, color: "#1F2937" },
+// ✅ ADDED MESSAGES, DOCUMENT VAULT & ANALYTICS TO THE CORE PORTFOLIO HUB NAVIGATION MATRIX
+const ownerNavItems: { name: string; href: string; icon: any; color: string; badgeCount?: number }[] = [
+  { name: "Overview", href: "/dashboard-owner", icon: LayoutGrid, color: "#1F2937" },
   { name: "Properties", href: "/dashboard-owner/propertiess", icon: Building2, color: "#0052CC" },
   { name: "Applications", href: "/dashboard-owner/applications", icon: ClipboardList, color: "#8B5CF6" },
   { name: "Onboard Customers", href: "/dashboard-owner/onboarding", icon: UserCheck, color: "#10B981" },
   { name: "Messages", href: "/dashboard-owner/messages", icon: MessageSquare, color: "#3B82F6" },
   { name: "Maintenance", href: "/dashboard-owner/maintenance", icon: Wrench, color: "#F59E0B" },
   { name: "Inspections", href: "/dashboard-owner/inspections", icon: ShieldCheck, color: "#0D9488" },
+  { name: "Document Vault", href: "/dashboard-owner/documents", icon: FileText, color: "#6366F1" },
   { name: "Financials", href: "/dashboard-owner/financials", icon: IndianRupee, color: "#10B981" },
+  { name: "Analytics", href: "/dashboard-owner/analytics", icon: BarChart3, color: "#EC4899" },
   { name: "Settings", href: "/dashboard-owner/settingss", icon: Settings, color: "#6B7280" },
   { name: "Exit Notices", href: "/dashboard-owner/exit", icon: LogOut, color: "#6B7280" },
 ];
@@ -269,6 +271,8 @@ function Sidebar({
         <nav className="space-y-1">
           {ownerNavItems.map((item) => {
             const isActive = pathname === item.href;
+            const badgeCount = item.badgeCount;
+
             return (
               <Link
                 key={item.name}
@@ -284,6 +288,17 @@ function Sidebar({
               >
                 <item.icon size={18} className={isActive ? "text-white" : "text-neutral-500"} />
                 {!collapsed && <span className="tracking-tight">{item.name}</span>}
+                {!collapsed && badgeCount && badgeCount > 0 && (
+                  <span
+                    className={`ml-auto text-[10px] font-black px-2 py-0.5 rounded-full transition-all ${
+                      isActive
+                        ? "bg-white/20 text-white border border-white/30"
+                        : "bg-neutral-950 text-white"
+                    }`}
+                  >
+                    {badgeCount}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -352,7 +367,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           collapsed={collapsed}
           onOpenSidebar={() => setCollapsed(false)}
         />
-        <main className="flex-1 bg-white p-6 md:p-10 min-w-0">
+        <main className="flex-1 bg-white p-4 md:p-6 lg:p-8 min-w-0">
           <div className="max-w-7xl mx-auto">{children}</div>
         </main>
         <ModalManager />

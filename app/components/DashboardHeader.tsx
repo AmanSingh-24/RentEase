@@ -60,7 +60,7 @@ export default function DashboardHeader({
         <NotificationBell />
 
         {/* User Profile Avatar Pill */}
-        <div className="flex items-center gap-3 bg-neutral-50 border border-neutral-200/90 rounded-full pl-2 pr-6 py-1.5 shadow-2xs">
+        <div className="flex items-center gap-3 bg-neutral-50 border border-neutral-200/90 rounded-full pl-2 pr-6 py-1 shadow-2xs">
           <div className="w-8 h-8 rounded-full bg-neutral-950 text-white font-bold text-xs flex items-center justify-center border border-neutral-800 shrink-0">
             {initials}
           </div>

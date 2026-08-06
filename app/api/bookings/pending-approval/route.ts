@@ -24,14 +24,21 @@ export async function GET() {
       status: "waiting_payment_approval",
     }).populate("tenantId", "name email");
 
-    // Also get the booking to retrieve payment details
+    // Also get the booking and payment records to retrieve payment details
     const result = await Promise.all(
       properties.map(async (prop) => {
         const booking = await Booking.findOne({
           propertyId: prop._id,
-          status: "pending_payment",
+        }).sort({ createdAt: -1 }); // Get most recent booking
+        
+        // Import Payment model to execute matching database query
+        const Payment = (await import("@/models/Payment")).default;
+        const payments = await Payment.find({
+          propertyId: prop._id,
+          tenantId: prop.tenantId,
         });
-        return { property: prop, booking };
+
+        return { property: prop, booking, payments };
       })
     );
 

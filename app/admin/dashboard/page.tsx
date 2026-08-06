@@ -259,7 +259,7 @@ export default function AdminDashboard() {
         />
 
         {/* Main Viewport */}
-        <main className="flex-1 bg-white p-6 md:p-10 min-w-0">
+        <main className="flex-1 bg-white p-4 md:p-6 lg:p-8 min-w-0">
           <div className="max-w-7xl mx-auto">
             {/* ── Toast Notification ───────────────────────────────────────────── */}
             {toast && (
