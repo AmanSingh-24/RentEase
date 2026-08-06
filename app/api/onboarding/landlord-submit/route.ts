@@ -243,6 +243,17 @@ export async function POST(request: Request) {
       leaseStartDate: new Date(),
     });
 
+    // Send email to owner confirming submission and 24-48h review timeline
+    const sessionUser = await User.findById(session.id);
+    if (sessionUser?.email) {
+      const { sendOwnerOnboardingSubmittedEmail } = await import("@/lib/email");
+      sendOwnerOnboardingSubmittedEmail(
+        sessionUser.email,
+        sessionUser.name || kycFullName || "Landlord",
+        formattedAddress || address
+      ).catch((err) => console.error("Landlord onboarding submitted email failed:", err));
+    }
+
     return NextResponse.json(
       {
         message:

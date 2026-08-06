@@ -64,6 +64,19 @@ export async function POST(request: Request) {
             "Congratulations! Your identity has been verified. Your property listing is now being reviewed for the marketplace.",
           actionUrl: "/dashboard-owner",
         });
+
+        // Send email to owner
+        if (user?.email) {
+          const { sendOwnerApplicationDecisionEmail } = await import("@/lib/email");
+          const userProp = await Property.findOne({ ownerId: targetId });
+          sendOwnerApplicationDecisionEmail(
+            user.email,
+            user.name || "Landlord",
+            userProp?.address || "your submitted property",
+            "approved"
+          ).catch((err) => console.error("Owner approve email failed:", err));
+        }
+
         return NextResponse.json({
           message: "Landlord KYC approved. Notification sent to the host.",
         });
@@ -72,7 +85,7 @@ export async function POST(request: Request) {
       case "reject_landlord": {
         const rejectReason =
           reason || "Identity verification failed. Please resubmit with valid documents.";
-        await User.findByIdAndUpdate(targetId, {
+        const user = await User.findByIdAndUpdate(targetId, {
           verificationStatus: "rejected",
           hostStatus: "rejected",
           rejectionReason: rejectReason,
@@ -84,6 +97,20 @@ export async function POST(request: Request) {
           message: `Your host application was not approved. Reason: ${rejectReason}. You can update your documents and resubmit.`,
           actionUrl: "/onboarding/landlord",
         });
+
+        // Send email to owner
+        if (user?.email) {
+          const { sendOwnerApplicationDecisionEmail } = await import("@/lib/email");
+          const userProp = await Property.findOne({ ownerId: targetId });
+          sendOwnerApplicationDecisionEmail(
+            user.email,
+            user.name || "Landlord",
+            userProp?.address || "your submitted property",
+            "rejected",
+            rejectReason
+          ).catch((err) => console.error("Owner reject email failed:", err));
+        }
+
         return NextResponse.json({ message: "Landlord KYC rejected. Notification sent." });
       }
 
@@ -123,17 +150,42 @@ export async function POST(request: Request) {
           message: `Your listing at ${property.address || property.city} has been approved and is now visible on the public marketplace.`,
           actionUrl: "/dashboard-owner",
         });
+
+        // Send email to owner
+        if (owner?.email) {
+          const { sendOwnerApplicationDecisionEmail } = await import("@/lib/email");
+          sendOwnerApplicationDecisionEmail(
+            owner.email,
+            owner.name || "Landlord",
+            property.address || property.city,
+            "approved"
+          ).catch((err) => console.error("Property approve email failed:", err));
+        }
+
         return NextResponse.json({
           message: "Property approved and live on the marketplace.",
         });
       }
 
       case "reject_property": {
-        await Property.findByIdAndUpdate(targetId, {
+        const rejectReason = reason || "Property documentation does not meet listing standards.";
+        const property = await Property.findByIdAndUpdate(targetId, {
           listingStatus: "rejected",
-          rejectionReason:
-            reason || "Property documentation does not meet listing standards.",
-        });
+          rejectionReason: rejectReason,
+        }).populate("ownerId");
+
+        if (property && (property.ownerId as any)?.email) {
+          const owner = property.ownerId as any;
+          const { sendOwnerApplicationDecisionEmail } = await import("@/lib/email");
+          sendOwnerApplicationDecisionEmail(
+            owner.email,
+            owner.name || "Landlord",
+            property.address || property.city,
+            "rejected",
+            rejectReason
+          ).catch((err) => console.error("Property reject email failed:", err));
+        }
+
         return NextResponse.json({ message: "Property listing rejected." });
       }
 

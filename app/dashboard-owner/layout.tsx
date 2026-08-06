@@ -7,7 +7,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { 
   LayoutGrid, Building2, Wrench, ShieldCheck, IndianRupee, 
-  Settings, LogOut, PlusCircle, X, Plus, MessageSquare, LayoutTemplate, ClipboardList, UserCheck
+  Settings, LogOut, PlusCircle, X, Plus, MessageSquare, LayoutTemplate, ClipboardList, UserCheck, Menu
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PropertyProvider, useProperty } from "../context/PropertyContext";
@@ -145,7 +145,7 @@ function ModalManager() {
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white w-full max-w-2xl rounded-[40px] shadow-2xl relative max-h-[90vh] overflow-y-auto">
-            <button onClick={closeModal} className="absolute top-8 right-8 text-gray-400 hover:text-black transition-colors"><X size={24} /></button>
+            <button onClick={closeModal} className="absolute top-8 right-8 text-gray-400 hover:text-black transition-colors"><X size={20} /></button>
             <div className="p-8 md:p-12">
               <div className="flex gap-2 mb-10">
                 {[1, 2].map(s => <div key={s} className={`h-1.5 flex-1 rounded-full ${step >= s ? 'bg-[#0052CC]' : 'bg-gray-100'}`} />)}
@@ -216,30 +216,91 @@ function ModalManager() {
   );
 }
 
+import DashboardHeader from "../components/DashboardHeader";
+
 // THE COMPONENT EXPOSING LINK INTERFACES
-function Sidebar({ userName, openModal, pathname }: { userName: string, openModal: (p: any) => void, pathname: string }) {
+function Sidebar({
+  openModal,
+  pathname,
+  collapsed,
+  onClose,
+  onOpen,
+}: {
+  openModal: (p: any) => void;
+  pathname: string;
+  collapsed: boolean;
+  onClose: () => void;
+  onOpen: () => void;
+}) {
   return (
-    <aside className="hidden md:flex w-72 bg-[#1F2937] flex-col justify-between p-6 fixed inset-y-0 left-0 z-50 rounded-r-[40px] shadow-2xl">
-      <div>
-        <div className="mb-12 px-2"><Image src="/desk.png" alt="RentEase" width={150} height={40} className="brightness-200" /></div>
-        <nav className="space-y-2">
+    <aside
+      className={`hidden md:flex flex-col justify-between bg-white border-r border-neutral-200/80 fixed inset-y-0 left-0 z-50 transition-all duration-300 ${
+        collapsed ? "w-20 p-3" : "w-64 p-5"
+      }`}
+    >
+      <div className="space-y-6">
+        {/* Sidebar Top: "Host Dashboard" text + X button when open, or Icon when collapsed */}
+        {!collapsed ? (
+          <div className="flex items-center justify-between px-2 pt-1 pb-2 border-b border-neutral-100">
+            <div className="flex flex-col text-left">
+              <span className="text-sm font-extrabold text-neutral-950 tracking-tight leading-tight">Host</span>
+              <span className="text-xs font-semibold text-neutral-500 tracking-wide">Dashboard</span>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl text-neutral-400 hover:text-neutral-950 hover:bg-neutral-100 transition-all cursor-pointer"
+              title="Collapse to Icon Strip"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        ) : (
+          <div className="flex justify-center pt-1 pb-2 border-b border-neutral-100">
+            <button
+              onClick={onOpen}
+              className="w-10 h-10 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-900 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+              title="Expand Sidebar"
+            >
+              <Menu size={20} />
+            </button>
+          </div>
+        )}
+
+        <nav className="space-y-1">
           {ownerNavItems.map((item) => {
             const isActive = pathname === item.href;
             return (
-              <Link key={item.name} href={item.href} className={`flex items-center gap-4 px-4 py-4 rounded-2xl transition-all duration-300 group ${isActive ? "bg-[#0052CC] text-white shadow-lg shadow-blue-500/20 scale-105" : "text-gray-400 hover:bg-white/5 hover:text-white"}`}>
-                <item.icon size={22} style={{ color: isActive ? "#FFFFFF" : item.color }} />
-                <span className="font-bold text-sm tracking-tight">{item.name}</span>
+              <Link
+                key={item.name}
+                href={item.href}
+                title={collapsed ? item.name : undefined}
+                className={`flex items-center gap-3 py-3 rounded-2xl transition-all font-semibold text-xs ${
+                  collapsed ? "justify-center px-0" : "px-3.5"
+                } ${
+                  isActive
+                    ? "bg-neutral-950 text-white shadow-md shadow-neutral-950/10 font-bold"
+                    : "text-neutral-600 hover:text-neutral-950 hover:bg-neutral-100/80"
+                }`}
+              >
+                <item.icon size={18} className={isActive ? "text-white" : "text-neutral-500"} />
+                {!collapsed && <span className="tracking-tight">{item.name}</span>}
               </Link>
             );
           })}
         </nav>
       </div>
-      <div className="pt-6 border-t border-white/10">
-        <button onClick={() => openModal(null)} className="w-full flex items-center justify-center gap-3 bg-[#0052CC] text-white p-4 rounded-2xl font-bold text-xs mb-6 hover:bg-[#0041a3] transition-all"><PlusCircle size={18} /> Add New Property</button>
-        <div className="flex items-center gap-3 px-2">
-          <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center font-black text-white border uppercase">{userName.charAt(0)}</div>
-          <div><p className="text-sm font-bold text-white leading-none">{userName}</p><p className="text-[9px] text-gray-500 uppercase tracking-widest font-black mt-1">Portfolio Owner</p></div>
-        </div>
+
+      <div className="space-y-3">
+        <button
+          onClick={() => openModal(null)}
+          title={collapsed ? "Add Property" : undefined}
+          className={`w-full flex items-center justify-center gap-2 bg-neutral-950 hover:bg-black text-white rounded-2xl font-bold text-xs shadow-md transition-all active:scale-95 cursor-pointer ${
+            collapsed ? "p-3" : "p-3.5"
+          }`}
+        >
+          <PlusCircle size={16} />
+          {!collapsed && <span>Add New Property</span>}
+        </button>
       </div>
     </aside>
   );
@@ -257,29 +318,45 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { openModal } = useProperty();
-  const [user, setUser] = useState({ name: "User" });
+  const [user, setUser] = useState<any>(null);
+  const [collapsed, setCollapsed] = useState(false);
 
-useEffect(() => {
-  const fetchUser = async () => {
-    // ✅ FIX: Drop localStorage completely. Call our secure endpoint directly.
-    const res = await fetch("/api/auth/me");
-    const data = await res.json();
-    if (res.ok && data.user) {
-      setUser(data.user);
-    } else {
-      console.error("Session missing or invalid verification parameters");
-    }
-  };
-  fetchUser();
-}, []);
+  useEffect(() => {
+    const fetchUser = async () => {
+      const res = await fetch("/api/auth/me");
+      const data = await res.json();
+      if (res.ok && data.user) {
+        setUser(data.user);
+      } else {
+        console.error("Session missing or invalid verification parameters");
+      }
+    };
+    fetchUser();
+  }, []);
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] flex">
-      <Sidebar userName={user.name} openModal={openModal} pathname={pathname} />
-      <main className="flex-1 md:ml-72 min-h-screen relative">
-        <div className="max-w-7xl mx-auto">{children}</div>
-      </main>
-      <ModalManager />
+    <div className="min-h-screen bg-white flex font-sans">
+      {/* Sidebar starting from top: 0 */}
+      <Sidebar
+        openModal={openModal}
+        pathname={pathname}
+        collapsed={collapsed}
+        onClose={() => setCollapsed(true)}
+        onOpen={() => setCollapsed(false)}
+      />
+
+      {/* Main Area Next to Sidebar */}
+      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${collapsed ? "md:ml-20" : "md:ml-64"}`}>
+        <DashboardHeader
+          user={user}
+          collapsed={collapsed}
+          onOpenSidebar={() => setCollapsed(false)}
+        />
+        <main className="flex-1 bg-white p-6 md:p-10 min-w-0">
+          <div className="max-w-7xl mx-auto">{children}</div>
+        </main>
+        <ModalManager />
+      </div>
     </div>
   );
 }

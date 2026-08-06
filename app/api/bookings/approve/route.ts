@@ -55,6 +55,17 @@ export async function POST(request: Request) {
       { status: "active" }
     );
 
+    // Send final approval email to tenant
+    const tenantUser = await User.findById(tenantId);
+    if (tenantUser?.email) {
+      const { sendTenantFinalApprovalEmail } = await import("@/lib/email");
+      sendTenantFinalApprovalEmail(
+        tenantUser.email,
+        tenantUser.name || "Tenant",
+        property.address
+      ).catch((err) => console.error("Final approval email failed:", err));
+    }
+
     return NextResponse.json({
       message: "Tenant approved and onboarded successfully. They now have full dashboard access.",
     }, { status: 200 });

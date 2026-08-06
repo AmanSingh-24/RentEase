@@ -28,8 +28,23 @@ export async function POST(request: Request) {
     booking.status = "rejected";
     await booking.save();
 
+    // Fetch property and tenant for email notification
+    const User = (await import("@/models/User")).default;
+    const [property, tenantUser] = await Promise.all([
+      Property.findById(booking.propertyId),
+      User.findById(booking.tenantId),
+    ]);
+
+    if (tenantUser?.email) {
+      const { sendTenantBookingRejectedEmail } = await import("@/lib/email");
+      sendTenantBookingRejectedEmail(
+        tenantUser.email,
+        tenantUser.name || booking.tenantContact?.name || "Applicant",
+        property?.address || "the property"
+      ).catch((err) => console.error("Booking rejection email failed:", err));
+    }
+
     // If property was pending_payment (only one assigned tenant), revert to vacant
-    const property = await Property.findById(booking.propertyId);
     if (property && property.status === "pending_payment") {
       await Property.findByIdAndUpdate(booking.propertyId, { status: "vacant" });
     }

@@ -4,7 +4,9 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Bell, Camera, Wrench, CreditCard, Settings, LogOut, Loader2, Lock, MessageSquare, ClipboardList } from "lucide-react";
+import { LayoutDashboard, Bell, Camera, Wrench, CreditCard, Settings, LogOut, Loader2, Lock, MessageSquare, ClipboardList, X, Menu } from "lucide-react";
+
+import DashboardHeader from "../components/DashboardHeader";
 
 export default function TenantLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -12,38 +14,40 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
   const [inspectionStatus, setInspectionStatus] = useState<string>("none"); // none, pending, verified, rejected
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [collapsed, setCollapsed] = useState(false);
 
-useEffect(() => {
-  const checkTenancy = async () => {
-    try {
-      // ✅ FIX: Read directly from /api/auth/me to fetch identity parameters securely
-      const res = await fetch("/api/auth/me");
-      const data = await res.json();
-      
-      if (res.ok && data.user) {
-        setUser(data.user);
-        setHasProperty(Boolean(data.user.propertyId)); 
+  useEffect(() => {
+    const checkTenancy = async () => {
+      try {
+        const res = await fetch("/api/auth/me");
+        const data = await res.json();
+        
+        if (res.ok && data.user) {
+          setUser(data.user);
+          setHasProperty(Boolean(data.user.propertyId)); 
 
-        // Get Inspection Status if property is linked
-        if (data.user.propertyId) {
-          // Pass the secure ID returned directly from our server session payload
-          const insRes = await fetch(`/api/inspections/get?tenantId=${data.user._id}&type=move-in`);
-          const insData = await insRes.json();
-          if (insRes.ok && insData.inspection) {
-            setInspectionStatus(insData.inspection.status);
+          if (data.user.propertyId) {
+            const insRes = await fetch(`/api/inspections/get?tenantId=${data.user._id}&type=move-in`);
+            const insData = await insRes.json();
+            if (insRes.ok && insData.inspection) {
+              setInspectionStatus(insData.inspection.status);
+            }
           }
         }
+      } catch (err) { 
+        console.error("Layout verification failure:", err); 
+      } finally { 
+        setLoading(false); 
       }
-    } catch (err) { 
-      console.error("Layout verification failure:", err); 
-    } finally { 
-      setLoading(false); 
-    }
-  };
-  checkTenancy();
-}, []);
+    };
+    checkTenancy();
+  }, []);
 
-  if (loading) return <div className="h-screen flex items-center justify-center bg-[#1F2937]"><Loader2 className="animate-spin text-blue-600" size={40} /></div>;
+  if (loading) return (
+    <div className="h-screen flex items-center justify-center bg-white">
+      <Loader2 className="animate-spin text-neutral-900" size={40} />
+    </div>
+  );
 
   const navItems = [
     { name: "Overview", href: "/dashboard-tenant", icon: LayoutDashboard, protected: false },
@@ -58,40 +62,94 @@ useEffect(() => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] flex">
-      {hasProperty && (
-        <aside className="hidden md:flex w-72 bg-[#1F2937] flex-col justify-between p-6 fixed inset-y-0 left-0 z-50 rounded-r-[40px] shadow-2xl">
-          <div>
-            <div className="mb-12 px-2"><Image src="/desk.png" alt="Logo" width={150} height={40} className="brightness-200" /></div>
-            <nav className="space-y-2">
-              {navItems.map((item) => {
-                const isLocked = item.protected && inspectionStatus !== "verified";
-                
-                return (
-                  <div key={item.name} className="relative group">
-                    <Link 
-                      href={isLocked ? "#" : item.href} 
-                      className={`flex items-center gap-4 px-4 py-4 rounded-2xl transition-all ${
-                        pathname === item.href ? "bg-[#0052CC] text-white shadow-lg" : 
-                        isLocked ? "opacity-30 cursor-not-allowed text-gray-500" : "text-gray-400 hover:text-white"
-                      }`}
-                    >
-                      <item.icon size={22} />
-                      <span className="font-bold text-sm tracking-tight">{item.name}</span>
-                      {isLocked && <Lock size={14} className="ml-auto text-gray-500" />}
-                    </Link>
-                  </div>
-                );
-              })}
-            </nav>
-          </div>
-          <button onClick={() => { localStorage.clear(); window.location.href = "/login"; }} className="w-full flex items-center gap-4 px-4 py-3 text-gray-400 hover:text-red-500 font-bold transition-all"><LogOut size={18} /> Sign Out</button>
-        </aside>
-      )}
+    <div className="min-h-screen bg-white flex font-sans">
+      {/* ── Left Sidebar (Full Height from top:0) ─────────────────────────── */}
+      <aside
+        className={`hidden md:flex flex-col justify-between bg-white border-r border-neutral-200/80 fixed inset-y-0 left-0 z-50 transition-all duration-300 ${
+          collapsed ? "w-20 p-3" : "w-64 p-5"
+        }`}
+      >
+        <div className="space-y-6">
+          {/* Sidebar Top: "Tenant Dashboard" text + X button when open, or Icon when collapsed */}
+          {!collapsed ? (
+            <div className="flex items-center justify-between px-2 pt-1 pb-2 border-b border-neutral-100">
+              <div className="flex flex-col text-left">
+                <span className="text-sm font-extrabold text-neutral-950 tracking-tight leading-tight">Tenant</span>
+                <span className="text-xs font-semibold text-neutral-500 tracking-wide">Dashboard</span>
+              </div>
+              <button
+                onClick={() => setCollapsed(true)}
+                className="p-2 rounded-xl text-neutral-400 hover:text-neutral-950 hover:bg-neutral-100 transition-all cursor-pointer"
+                title="Collapse to Icon Strip"
+              >
+                <X size={18} />
+              </button>
+            </div>
+          ) : (
+            <div className="flex justify-center pt-1 pb-2 border-b border-neutral-100">
+              <button
+                onClick={() => setCollapsed(false)}
+                className="w-10 h-10 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-900 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+                title="Expand Sidebar"
+              >
+                <Menu size={20} />
+              </button>
+            </div>
+          )}
 
-      <main className={`flex-1 ${hasProperty ? "md:ml-72" : "w-full"} min-h-screen`}>
-        {children}
-      </main>
+          {/* Nav Items */}
+          <nav className="space-y-1">
+            {navItems.map((item) => {
+              const isLocked = item.protected && inspectionStatus !== "verified";
+              const isActive = pathname === item.href;
+              
+              return (
+                <div key={item.name} className="relative">
+                  <Link 
+                    href={isLocked ? "#" : item.href} 
+                    title={collapsed ? item.name : undefined}
+                    className={`flex items-center gap-3 py-3 rounded-2xl transition-all font-semibold text-xs ${
+                      collapsed ? "justify-center px-0" : "px-3.5"
+                    } ${
+                      isActive 
+                        ? "bg-neutral-950 text-white shadow-md shadow-neutral-950/10 font-bold" 
+                        : isLocked 
+                          ? "opacity-40 cursor-not-allowed text-neutral-400" 
+                          : "text-neutral-600 hover:text-neutral-950 hover:bg-neutral-100/80"
+                    }`}
+                  >
+                    <item.icon size={18} className={isActive ? "text-white" : "text-neutral-500"} />
+                    {!collapsed && <span className="tracking-tight">{item.name}</span>}
+                    {!collapsed && isLocked && <Lock size={12} className="ml-auto text-neutral-400" />}
+                  </Link>
+                </div>
+              );
+            })}
+          </nav>
+        </div>
+
+        {!collapsed && (
+          <div className="p-3 bg-neutral-50 rounded-2xl border border-neutral-200/70 text-center">
+            <p className="text-[11px] font-bold text-neutral-900">RentEase Tenant Portal</p>
+            <p className="text-[10px] text-neutral-400 mt-0.5">Verified Digital Residency</p>
+          </div>
+        )}
+      </aside>
+
+      {/* ── Main Layout Wrapper ─────────────────────────────────────────────── */}
+      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${collapsed ? "md:ml-20" : "md:ml-64"}`}>
+        {/* Top Navbar Header */}
+        <DashboardHeader
+          user={user}
+          collapsed={collapsed}
+          onOpenSidebar={() => setCollapsed(false)}
+        />
+
+        {/* Main Viewport Content */}
+        <main className="flex-1 bg-white p-6 md:p-10 min-w-0">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

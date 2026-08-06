@@ -121,13 +121,17 @@ observer.observe(sentinel);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch { /* ignore */ }
     document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    localStorage.clear();
+    sessionStorage.clear();
     setSession(null);
     setUserDropdown(false);
     setIsOpen(false);
-    router.push("/");
-    router.refresh();
+    window.location.href = "/";
   };
 
   const getDashboardLink = () => {

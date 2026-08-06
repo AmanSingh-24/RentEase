@@ -39,11 +39,49 @@ export async function POST(request: Request) {
       tenantId: booking.tenantId,
     });
 
-    // Reject all other pending bookings for the same property
+    // Fetch property address and tenant user details for email notification
+    const User = (await import("@/models/User")).default;
+    const [property, tenantUser] = await Promise.all([
+      Property.findById(booking.propertyId),
+      User.findById(booking.tenantId),
+    ]);
+
+    // Send email to tenant
+    if (tenantUser?.email) {
+      const { sendTenantPropertyAssignedEmail } = await import("@/lib/email");
+      sendTenantPropertyAssignedEmail(
+        tenantUser.email,
+        tenantUser.name || booking.tenantContact?.name || "Tenant",
+        property?.address || "your requested property"
+      ).catch((err) => console.error("Email send failed:", err));
+    }
+
+    // Reject all other pending bookings for the same property & send rejection emails
+    const otherBookings = await Booking.find({
+      propertyId: booking.propertyId,
+      status: "pending",
+      _id: { $ne: booking._id },
+    });
+
     await Booking.updateMany(
       { propertyId: booking.propertyId, status: "pending", _id: { $ne: booking._id } },
       { status: "rejected" }
     );
+
+    // Send rejection email to each rejected applicant
+    if (otherBookings.length > 0) {
+      const { sendTenantBookingRejectedEmail } = await import("@/lib/email");
+      for (const b of otherBookings) {
+        const otherTenant = await User.findById(b.tenantId);
+        if (otherTenant?.email) {
+          sendTenantBookingRejectedEmail(
+            otherTenant.email,
+            otherTenant.name || b.tenantContact?.name || "Applicant",
+            property?.address || "the property"
+          ).catch((err) => console.error("Rejection email failed:", err));
+        }
+      }
+    }
 
     return NextResponse.json({ message: "Property assigned. Tenant has been notified to proceed with payment." }, { status: 200 });
   } catch (error: any) {

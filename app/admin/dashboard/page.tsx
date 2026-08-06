@@ -13,7 +13,13 @@ import {
   RefreshCw,
   ExternalLink,
   FileText,
+  X,
+  Menu,
 } from "lucide-react";
+
+import Link from "next/link";
+import Image from "next/image";
+import DashboardHeader from "@/app/components/DashboardHeader";
 
 type Tab = "landlords" | "properties" | "oversight";
 
@@ -77,7 +83,15 @@ function ConfirmModal({
 }
 
 export default function AdminDashboard() {
+  const [adminUser, setAdminUser] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<Tab>("landlords");
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((d) => { if (d.user) setAdminUser(d.user); })
+      .catch(() => {});
+  }, []);
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>({
     pendingLandlords: [],
@@ -160,68 +174,130 @@ export default function AdminDashboard() {
     { id: "oversight" as Tab, label: "Oversight", icon: ShieldCheck, count: null },
   ];
 
+  const [collapsed, setCollapsed] = useState(false);
+
   return (
-    <div className="p-6 md:p-10">
-      {/* ── Toast ───────────────────────────────────────────────────────── */}
-      {toast && (
-        <div
-          className={`fixed top-6 right-6 z-50 px-5 py-3 rounded-xl font-bold text-sm shadow-xl transition-all ${
-            toast.type === "success" ? "bg-[#10B981] text-white" : "bg-red-500 text-white"
-          }`}
-        >
-          {toast.type === "success" ? "✓ " : "✗ "}{toast.msg}
-        </div>
-      )}
+    <div className="min-h-screen bg-white flex font-sans">
+      {/* ── Left Sidebar (Full Height from top:0) ─────────────────────────── */}
+      <aside
+        className={`hidden md:flex flex-col justify-between bg-white border-r border-neutral-200/80 fixed inset-y-0 left-0 z-50 transition-all duration-300 ${
+          collapsed ? "w-20 p-3" : "w-64 p-5"
+        }`}
+      >
+        <div className="space-y-6">
+          {/* Sidebar Top: "Admin Dashboard" text + X button when open, or Icon when collapsed */}
+          {!collapsed ? (
+            <div className="flex items-center justify-between px-2 pt-1 pb-2 border-b border-neutral-100">
+              <div className="flex flex-col text-left">
+                <span className="text-sm font-extrabold text-neutral-950 tracking-tight leading-tight">Admin</span>
+                <span className="text-xs font-semibold text-neutral-500 tracking-wide">Dashboard</span>
+              </div>
+              <button
+                onClick={() => setCollapsed(true)}
+                className="p-2 rounded-xl text-neutral-400 hover:text-neutral-950 hover:bg-neutral-100 transition-all cursor-pointer"
+                title="Collapse to Icon Strip"
+              >
+                <X size={18} />
+              </button>
+            </div>
+          ) : (
+            <div className="flex justify-center pt-1 pb-2 border-b border-neutral-100">
+              <button
+                onClick={() => setCollapsed(false)}
+                className="w-10 h-10 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-900 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+                title="Expand Sidebar"
+              >
+                <Menu size={20} />
+              </button>
+            </div>
+          )}
 
-      {/* ── Confirm Dialog ───────────────────────────────────────────────── */}
-      {confirm && (
-        <ConfirmModal
-          title={confirm.title}
-          message={confirm.message}
-          requireReason={confirm.requireReason}
-          onConfirm={confirm.onConfirm}
-          onCancel={() => setConfirm(null)}
+          <nav className="space-y-1">
+            {tabs.map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  title={collapsed ? tab.label : undefined}
+                  className={`w-full flex items-center gap-3 py-3 rounded-2xl transition-all font-semibold text-xs text-left cursor-pointer ${
+                    collapsed ? "justify-center px-0" : "px-3.5"
+                  } ${
+                    isActive
+                      ? "bg-neutral-950 text-white shadow-md shadow-neutral-950/10 font-bold"
+                      : "text-neutral-600 hover:text-neutral-950 hover:bg-neutral-100/80"
+                  }`}
+                >
+                  <tab.icon size={18} className={isActive ? "text-white" : "text-neutral-500"} />
+                  {!collapsed && <span className="tracking-tight">{tab.label}</span>}
+                  {!collapsed && tab.count !== null && tab.count > 0 && (
+                    <span className="ml-auto bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+
+        {!collapsed && (
+          <div className="p-3 bg-neutral-50 rounded-2xl border border-neutral-200/70 text-center">
+            <p className="text-[11px] font-bold text-neutral-900">RentEase Admin Panel</p>
+            <p className="text-[10px] text-neutral-400 mt-0.5">Platform Oversight & KYC</p>
+          </div>
+        )}
+      </aside>
+
+      {/* ── Main Layout Wrapper ─────────────────────────────────────────────── */}
+      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${collapsed ? "md:ml-20" : "md:ml-64"}`}>
+        {/* Top Navbar Header Starts Next to Sidebar */}
+        <DashboardHeader
+          user={adminUser}
+          collapsed={collapsed}
+          onOpenSidebar={() => setCollapsed(false)}
         />
-      )}
 
-      {/* ── Header ──────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-black text-[#1F2937]">Admin Control Center</h1>
-          <p className="text-gray-400 text-sm mt-1">
-            {data.pendingLandlords.length + data.pendingProperties.length} items awaiting review
-          </p>
-        </div>
-        <button
-          onClick={fetchData}
-          className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-50 transition-colors"
-        >
-          <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Refresh
-        </button>
-      </div>
-
-      {/* ── Tabs ─────────────────────────────────────────────────────────── */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-2xl mb-8 w-fit">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${
-              activeTab === tab.id
-                ? "bg-white text-[#1F2937] shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            <tab.icon size={16} />
-            {tab.label}
-            {tab.count !== null && tab.count > 0 && (
-              <span className="bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
-                {tab.count}
-              </span>
+        {/* Main Viewport */}
+        <main className="flex-1 bg-white p-6 md:p-10 min-w-0">
+          <div className="max-w-7xl mx-auto">
+            {/* ── Toast Notification ───────────────────────────────────────────── */}
+            {toast && (
+              <div
+                className={`fixed top-20 right-6 z-50 px-5 py-3 rounded-xl shadow-xl font-bold text-sm text-white transition-all ${
+                  toast.type === "success" ? "bg-emerald-600" : "bg-red-600"
+                }`}
+              >
+                {toast.type === "success" ? "✓ " : "✗ "}{toast.msg}
+              </div>
             )}
-          </button>
-        ))}
-      </div>
+
+            {/* ── Confirm Dialog ───────────────────────────────────────────────── */}
+            {confirm && (
+              <ConfirmModal
+                title={confirm.title}
+                message={confirm.message}
+                requireReason={confirm.requireReason}
+                onConfirm={confirm.onConfirm}
+                onCancel={() => setConfirm(null)}
+              />
+            )}
+
+            {/* ── Header ──────────────────────────────────────────────────────── */}
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h1 className="text-3xl font-black text-neutral-950">Admin Control Center</h1>
+                <p className="text-neutral-400 text-sm mt-1">
+                  {data.pendingLandlords.length + data.pendingProperties.length} items awaiting review
+                </p>
+              </div>
+              <button
+                onClick={fetchData}
+                className="flex items-center gap-2 px-4 py-2 border border-neutral-200 rounded-xl text-sm font-bold text-neutral-600 hover:bg-neutral-50 transition-colors"
+              >
+                <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Refresh
+              </button>
+            </div>
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
@@ -578,6 +654,9 @@ export default function AdminDashboard() {
           )}
         </>
       )}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
