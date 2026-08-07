@@ -15,6 +15,7 @@ import { motion, AnimatePresence } from "framer-motion";
 export default function OwnerFinancials() {
   const [payments, setPayments] = useState<any[]>([]);
   const [proMaintenance, setProMaintenance] = useState<any[]>([]);
+  const [unappliedRepairs, setUnappliedRepairs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -49,6 +50,7 @@ export default function OwnerFinancials() {
         });
         setPayments(validPayments);
         setProMaintenance(data.proMaintenance || []);
+        setUnappliedRepairs(data.unappliedRepairs || []);
       }
     } catch (err) {
       console.error("Ledger sync failed", err);
@@ -86,13 +88,14 @@ export default function OwnerFinancials() {
       .reduce((sum, p) => sum + Number(p.amount || p.baseRent || 0), 0);
 
     const totalDebits = rentPayments
-      .reduce((sum, p) => sum + Number(p.breakdown?.credit || 0), 0);
+      .reduce((sum, p) => sum + Number(p.breakdown?.credit || 0), 0)
+      + unappliedRepairs.reduce((sum, m) => sum + Number(m.finalInvoice?.amount || m.estimatedCost || 0), 0);
       
     const totalPenalties = rentPayments
       .filter(p => p.status === "completed" || p.status === "verified")
       .reduce((sum, p) => sum + Number(p.breakdown?.penalty || 0), 0);
 
-    const proPayments = proMaintenance.reduce((sum, m) => sum + Number(m.finalInvoice?.amount || 0), 0);
+    const proPayments = proMaintenance.reduce((sum, m) => sum + Number(m.finalInvoice?.amount || m.estimatedCost || 0), 0);
 
     // Mock deterministic growth based on total size for premium demo feel
     const getGrowth = (val: number, inverse: boolean = false) => {
@@ -112,7 +115,7 @@ export default function OwnerFinancials() {
       totalPenalties: { val: totalPenalties, growth: getGrowth(totalPenalties) }, 
       proPayments: { val: proPayments, growth: getGrowth(proPayments, true) } 
     };
-  }, [filteredData, proMaintenance]);
+  }, [filteredData, proMaintenance, unappliedRepairs]);
 
   // ✅ CHART DATA GENERATION
   const chartData = useMemo(() => {

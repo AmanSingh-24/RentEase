@@ -167,7 +167,7 @@ export default function OwnerExitInbox() {
           {settlementQueue.map((req: any) => {
              const today = new Date();
              const moveOut = new Date(req.moveOutDate);
-             const settlementUnlock = new Date(moveOut.getTime() - 86400000);
+             const settlementUnlock = new Date(moveOut.getTime() + (14 * 86400000)); // 14 days after move-out
              const isSettlementEnabled = today >= settlementUnlock;
 
              return (

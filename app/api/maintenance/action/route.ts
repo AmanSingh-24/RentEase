@@ -55,6 +55,7 @@ export async function PUT(request: Request) {
       }
 
       updateData.status = "resolved";
+      updateData.isFixedByTenant = true;
       updateData.finalInvoice = { 
         amount: Number(receiptAmount) || 0, 
         url: paymentProofUrl,
@@ -101,10 +102,9 @@ export async function PUT(request: Request) {
       };
     }
 
-    // 6. TENANT CONFIRMS PROFESSIONAL WORK IS COMPLETE
     if (action === "professional_work_complete") {
       updateData.status = "resolved";
-      updateData.causation = "pro_resolved";
+      updateData.isSolvedByPro = true;
       // Preserve existing contractor info for owner reference
     }
 

@@ -49,12 +49,18 @@ export async function GET(request: Request) {
       return null;
     }));
 
-    // 4. Fetch Maintenance Pro Payments
     const proMaintenance = await Maintenance.find({
       propertyId: { $in: propertyIds },
-      responsibility: "owner",
-      status: { $in: ["resolved", "owner_led_fix"] }
+      isSolvedByPro: true
     }).populate("tenantId");
+
+    // 5. Fetch Unapplied Maintenance Credits (Tenant-led fixes waiting for next invoice)
+    const unappliedRepairs = await Maintenance.find({
+      propertyId: { $in: propertyIds },
+      isAmountApproved: true,
+      isFixedByTenant: true,
+      isCredited: { $ne: true }
+    });
 
     const finalReport = [
       ...dbPayments.map(p => ({
@@ -75,7 +81,7 @@ export async function GET(request: Request) {
       ...overdueReports.filter(Boolean)
     ];
 
-    return NextResponse.json({ payments: finalReport, proMaintenance });
+    return NextResponse.json({ payments: finalReport, proMaintenance, unappliedRepairs });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

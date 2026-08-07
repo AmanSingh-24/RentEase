@@ -54,9 +54,21 @@ export async function calculateLedgerItem(prop: any, tenant: any, monthName: str
         propertyId: prop._id, 
         status: "resolved", 
         isCredited: false,
-        isAmountApproved: true
+        isAmountApproved: true,
+        isFixedByTenant: true
     }},
-    { $group: { _id: null, total: { $sum: "$finalInvoice.amount" } } }
+    { $group: { 
+        _id: null, 
+        total: { 
+           $sum: { 
+               $cond: [
+                   { $gt: ["$finalInvoice.amount", 0] },
+                   "$finalInvoice.amount",
+                   "$estimatedCost"
+               ]
+           }
+        } 
+    } }
   ]);
   const maintenanceCredit = credits[0]?.total || 0;
 

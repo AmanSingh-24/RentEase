@@ -57,7 +57,11 @@ export default function OwnerExitReview({ params }: { params: Promise<{ id: stri
   if (loading || !data || !data.exit) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-blue-600" size={40} /></div>;
 
   const status = data.exit.status;
-  const today = new Date().toISOString().split('T')[0];
+  const moveOutStr = data.exit.moveOutDate ? new Date(data.exit.moveOutDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+  
+  const moveOutDateObj = new Date(moveOutStr);
+  const maxInspectionDateObj = new Date(moveOutDateObj.getTime() + (5 * 24 * 60 * 60 * 1000));
+  const maxInspectionStr = maxInspectionDateObj.toISOString().split('T')[0];
 
   return (
     <div className="p-10 max-w-7xl mx-auto pb-40 space-y-12">
@@ -194,7 +198,7 @@ export default function OwnerExitReview({ params }: { params: Promise<{ id: stri
               <button onClick={() => setShowPhysicalForm(false)} className="absolute top-10 right-10 text-gray-300 hover:text-black transition-colors"><X size={24} /></button>
               <h2 className="text-3xl font-black mb-8 tracking-tight italic">Schedule Inspector</h2>
               <div className="space-y-4">
-                <input type="date" min={today} className="w-full p-5 bg-gray-50 rounded-2xl font-bold" onChange={(e) => setForm({...form, inspectionDate: e.target.value})} />
+                <input type="date" min={moveOutStr} max={maxInspectionStr} className="w-full p-5 bg-gray-50 rounded-2xl font-bold" onChange={(e) => setForm({...form, inspectionDate: e.target.value})} />
                 <input placeholder="Contractor Name" className="w-full p-5 bg-gray-50 rounded-2xl font-bold" onChange={(e) => setForm({...form, inspectorName: e.target.value})} />
                 <input placeholder="Contact Number" className="w-full p-5 bg-gray-50 rounded-2xl font-bold" onChange={(e) => setForm({...form, inspectorContact: e.target.value})} />
                 <button onClick={() => handleDecision("physical_inspection_required")} className="w-full py-6 bg-orange-500 text-white rounded-[32px] font-black uppercase text-xs tracking-widest shadow-xl shadow-orange-100 mt-6">Confirm Assignment</button>
