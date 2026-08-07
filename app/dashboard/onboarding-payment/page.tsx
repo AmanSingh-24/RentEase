@@ -82,7 +82,7 @@ export default function OnboardingPaymentPage() {
       return;
     }
 
-    const totalAmount = Number(property.rentAmount) + Number(property.depositAmount || 0);
+    const totalAmount = calculatedRent + Number(property.depositAmount || 0);
 
     try {
       // 1. Create Razorpay order
@@ -128,6 +128,7 @@ export default function OnboardingPaymentPage() {
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
+              proratedRent: calculatedRent, // Pass prorated amount
             }),
           });
           const verifyData = await verifyRes.json();
@@ -166,9 +167,27 @@ export default function OnboardingPaymentPage() {
   );
   if (!property) return null;
 
-  const rent = Number(property.rentAmount || 0);
+  // ✅ CALCULATE PRORATED RENT
+  let calculatedRent = Number(property.rentAmount || 0);
+  let isProrated = false;
+  let activeDays = 0;
+  let totalDaysInMonth = 0;
+  
+  // Use leaseStartDate if set, otherwise assume tenancy begins today
+  let leaseDate: Date = property.leaseStartDate ? new Date(property.leaseStartDate) : new Date();
+
+  totalDaysInMonth = new Date(leaseDate.getFullYear(), leaseDate.getMonth() + 1, 0).getDate();
+  const startDay = leaseDate.getDate();
+  activeDays = totalDaysInMonth - startDay + 1;
+
+  if (startDay > 1) {
+    const dailyRate = property.rentAmount / totalDaysInMonth;
+    calculatedRent = Math.round(dailyRate * activeDays);
+    isProrated = true;
+  }
+
   const deposit = Number(property.depositAmount || 0);
-  const total = rent + deposit;
+  const total = calculatedRent + deposit;
 
   return (
     <div className="min-h-screen bg-[#F9FAFB]">
@@ -232,18 +251,28 @@ export default function OnboardingPaymentPage() {
                   ₹{deposit.toLocaleString("en-IN")}
                 </span>
               </div>
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-start">
                 <div>
                   <p className="text-sm font-bold text-[#1F2937]">First Month Rent</p>
                   <p className="text-xs text-gray-400">
-                    {new Date().toLocaleString("default", { month: "long" })}{" "}
-                    {new Date().getFullYear()}
+                    {leaseDate ? `${leaseDate.toLocaleString("default", { month: "long" })} ${leaseDate.getFullYear()}` : "First Month"}
                   </p>
                 </div>
                 <span className="font-bold text-[#1F2937]">
-                  ₹{rent.toLocaleString("en-IN")}
+                  ₹{calculatedRent.toLocaleString("en-IN")}
                 </span>
               </div>
+              
+              {isProrated && (
+                <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-3 mt-2">
+                  <p className="text-xs font-bold text-blue-700 mb-1">Prorated Rate ({activeDays} days)</p>
+                  <p className="text-[10px] text-blue-600/80 leading-relaxed">
+                    Moving in on {leaseDate!.getDate()} {leaseDate!.toLocaleString('default', { month: 'short' })}. 
+                    Calculated as (₹{property.rentAmount} ÷ {totalDaysInMonth} days) × {activeDays} days.
+                  </p>
+                </div>
+              )}
+
               <div className="h-px bg-gray-100" />
               <div className="flex justify-between items-center">
                 <span className="font-black text-[#1F2937]">Total</span>

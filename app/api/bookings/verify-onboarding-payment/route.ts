@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     const session = await getSessionUser();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { bookingId, razorpay_order_id, razorpay_payment_id, razorpay_signature } =
+    const { bookingId, razorpay_order_id, razorpay_payment_id, razorpay_signature, proratedRent } =
       await request.json();
 
     // ── 1. Verify Razorpay signature ────────────────────────────────────────
@@ -46,10 +46,10 @@ export async function POST(request: Request) {
     const property = await Property.findById(booking.propertyId);
     if (!property) return NextResponse.json({ error: "Property not found" }, { status: 404 });
 
-    // Use today's date to label the first payment month/year
-    const now = new Date();
-    const startMonth = now.toLocaleString("default", { month: "long" });
-    const startYear = now.getFullYear();
+    // Use leaseStartDate to label the first payment month/year if available
+    const leaseDate = property.leaseStartDate ? new Date(property.leaseStartDate) : new Date();
+    const startMonth = leaseDate.toLocaleString("default", { month: "long" });
+    const startYear = leaseDate.getFullYear();
 
     // ── 3. Create DEPOSIT payment record ────────────────────────────────────
     await Payment.create({
@@ -67,16 +67,17 @@ export async function POST(request: Request) {
     });
 
     // ── 4. Create first month RENT payment record ────────────────────────────
+    const actualRentPaid = proratedRent !== undefined ? proratedRent : property.rentAmount;
     await Payment.create({
       propertyId: property._id,
       tenantId: session.id,
       type: "rent",
       month: startMonth,
       year: startYear,
-      baseRent: property.rentAmount,
+      baseRent: actualRentPaid,
       penaltyApplied: 0,
       maintenanceCredit: 0,
-      totalAmountPaid: property.rentAmount,
+      totalAmountPaid: actualRentPaid,
       gatewayTransactionId: razorpay_payment_id,
       status: "completed",
     });

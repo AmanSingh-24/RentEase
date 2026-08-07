@@ -5,16 +5,23 @@ import Payment from "@/models/Payment";
 import Maintenance from "@/models/Maintenance"; // ✅ Required for Credit Burn
 import Notification from "@/models/Notification";
 import { logActivity } from "@/lib/logActivity";
+import { getSessionUser } from "@/lib/auth-helper";
 import crypto from "crypto";
 
 export async function POST(request: Request) {
   try {
     await connectToDatabase();
+    
+    // Get user from secure session instead of frontend payload
+    const session = await getSessionUser();
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const userId = session.id;
+
     const body = await request.json();
 
     // 1. Destructure all fields from frontend (Matching Schema names)
     const { 
-      userId, month, year, 
+      month, year, 
       totalAmountPaid, 
       baseRent, 
       maintenanceCredit, 

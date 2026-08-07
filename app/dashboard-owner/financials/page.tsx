@@ -3,28 +3,32 @@
 import { useState, useEffect, useMemo } from "react";
 import { 
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, 
-  CartesianGrid, Legend, Cell 
+  CartesianGrid, Legend 
 } from "recharts";
 import { 
   TrendingUp, BellRing, Loader2, BadgeCheck, 
-  IndianRupee, Zap, Target, Clock, 
-  Filter, Home, Calendar, XCircle, Search, User
+  Target, Calendar, Home, Search, User, CreditCard, Wrench, AlertCircle, Briefcase, Coins,
+  Eye, XCircle, CheckCircle2, ChevronRight, FileText
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function OwnerFinancials() {
   const [payments, setPayments] = useState<any[]>([]);
+  const [proMaintenance, setProMaintenance] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // ✅ INDIVIDUAL PENALTY STATE
-  const [disabledPenalties, setDisabledPenalties] = useState<Set<string>>(new Set());
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  
+  // Breakdown Modal State
+  const [selectedItem, setSelectedItem] = useState<any>(null);
 
   // ✅ GLOBAL FILTERS
   const [filters, setFilters] = useState({
     property: "all",
     month: "all",
     year: "2026",
-    status: "all"
+    status: "all",
+    type: "all"
   });
 
   useEffect(() => {
@@ -36,14 +40,15 @@ export default function OwnerFinancials() {
       const res = await fetch(`/api/payments/get-for-owner`);
       const data = await res.json();
       if (res.ok) {
-        // Filter out any virtual records that occur BEFORE the lease start date
         const validPayments = (data.payments || []).filter((p: any) => {
+          if (p.type === "deposit") return true;
           if (!p.propertyId?.leaseStartDate) return true;
           const leaseStart = new Date(p.propertyId.leaseStartDate);
           const recordDate = new Date(`${p.month} 1, ${p.year || 2026}`);
           return recordDate >= new Date(leaseStart.getFullYear(), leaseStart.getMonth(), 1);
         });
         setPayments(validPayments);
+        setProMaintenance(data.proMaintenance || []);
       }
     } catch (err) {
       console.error("Ledger sync failed", err);
@@ -52,7 +57,7 @@ export default function OwnerFinancials() {
     }
   };
 
-  // ✅ DYNAMIC FILTERING LOGIC (Applied to Table and Graph)
+  // ✅ DYNAMIC FILTERING LOGIC
   const filteredData = useMemo(() => {
     return payments.filter((p: any) => {
       const matchProp = filters.property === "all" || p.propertyId?.address === filters.property;
@@ -61,80 +66,137 @@ export default function OwnerFinancials() {
       const matchStatus = filters.status === "all" || 
         (filters.status === "paid" && (p.status === "completed" || p.status === "verified")) ||
         (filters.status === "overdue" && p.status === "overdue");
+      const matchType = filters.type === "all" || p.type === filters.type;
 
-      return matchProp && matchMonth && matchYear && matchStatus;
+      return matchProp && matchMonth && matchYear && matchStatus && matchType;
     });
   }, [payments, filters]);
 
-// ✅ SAFE CHART DATA
-const chartData = useMemo(() => {
-  const months = ["January", "February", "March", "April", "May", "June"];
-  return months.map(m => {
-    const monthPayments = filteredData.filter(p => p.month === m);
-    const collected = monthPayments
+  // ✅ 6 PREMIUM STATS CALCULATION
+  const stats = useMemo(() => {
+    const rentPayments = filteredData.filter(p => p.type === "rent");
+    const depositPayments = filteredData.filter(p => p.type === "deposit" && (p.status === "completed" || p.status === "verified"));
+
+    const totalDeposit = depositPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+    const totalCollected = rentPayments
       .filter(p => p.status === "completed" || p.status === "verified")
-      .reduce((sum, p) => sum + Number(p.totalAmountPaid || p.amount || 0), 0);
-    const pending = monthPayments
-      .filter(p => p.status === "overdue")
       .reduce((sum, p) => sum + Number(p.amount || 0), 0);
-    return { name: m.substring(0, 3), collected, pending };
-  }).filter(d => d.collected > 0 || d.pending > 0);
-}, [filteredData]);
+    const totalPending = rentPayments
+      .filter(p => p.status === "overdue")
+      .reduce((sum, p) => sum + Number(p.amount || p.baseRent || 0), 0);
 
-// ✅ SAFE STATS CALCULATION (Prevents NaN)
-const stats = useMemo(() => {
-  const totalCollected = filteredData
-    .filter(p => p.status === "completed" || p.status === "verified")
-    .reduce((sum, p) => sum + Number(p.totalAmountPaid || p.amount || 0), 0);
-  
-  const totalPending = filteredData
-    .filter(p => p.status === "overdue")
-    .reduce((sum, p) => sum + Number(p.amount || p.baseRent || 0), 0);
-  
-  return { totalCollected, totalPending, count: filteredData.length };
-}, [filteredData]);
+    const totalDebits = rentPayments
+      .filter(p => p.status === "completed" || p.status === "verified")
+      .reduce((sum, p) => sum + Number(p.breakdown?.credit || 0), 0);
+      
+    const totalPenalties = rentPayments
+      .filter(p => p.status === "completed" || p.status === "verified")
+      .reduce((sum, p) => sum + Number(p.breakdown?.penalty || 0), 0);
 
-  const togglePenalty = (id: string) => {
-    setDisabledPenalties(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) newSet.delete(id);
-      else newSet.add(id);
-      return newSet;
-    });
+    const proPayments = proMaintenance.reduce((sum, m) => sum + Number(m.finalInvoice?.amount || 0), 0);
+
+    return { totalDeposit, totalCollected, totalPending, totalDebits, totalPenalties, proPayments };
+  }, [filteredData, proMaintenance]);
+
+  const togglePenalty = async (item: any) => {
+    setActionLoading(`toggle_${item._id}`);
+    const newValue = !(item.breakdown?.isLateFeeWaived);
+    
+    setPayments(prev => prev.map(p => 
+      p._id === item._id ? { ...p, breakdown: { ...p.breakdown, isLateFeeWaived: newValue } } : p
+    ));
+
+    try {
+      await fetch('/api/payments/toggle-penalty', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          propertyId: item.propertyId._id,
+          tenantId: item.tenantId._id,
+          month: item.month,
+          year: item.year,
+          isLateFeeWaived: newValue
+        })
+      });
+      fetchPayments();
+    } catch (err) {
+      alert("Failed to update penalty");
+    } finally {
+      setActionLoading(null);
+    }
   };
 
-  if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-blue-600" size={40}/></div>;
+  const handleNudge = async (item: any) => {
+    setActionLoading(`nudge_${item._id}`);
+    try {
+      const res = await fetch('/api/payments/nudge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          propertyId: item.propertyId._id,
+          tenantId: item.tenantId._id,
+          month: item.month,
+          year: item.year
+        })
+      });
+      
+      const data = await res.json();
+      if (res.ok) {
+        alert("Reminder sent to tenant successfully!");
+      } else {
+        alert(data.error || "Failed to send reminder");
+      }
+    } catch (err) {
+      alert("Failed to send reminder");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-neutral-900" size={40}/></div>;
 
   const uniqueProperties = Array.from(new Set(payments.map((p: any) => p.propertyId?.address).filter(Boolean)));
 
   return (
-    <div className="p-4 md:p-10 lg:p-12 max-w-7xl mx-auto space-y-10 bg-[#F9FAFB] min-h-screen">
+    <div className="space-y-6">
       
       {/* 🟢 HEADER & FILTERS */}
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+      <header className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
         <div>
-          <h1 className="text-5xl font-black text-[#1F2937] tracking-tighter italic">Treasury Control</h1>
-          <p className="text-gray-400 font-bold mt-2 uppercase text-[10px] tracking-[0.3em]">Filtered Portfolio Revenue & Penalty Management</p>
+          <div className="flex items-center gap-1.5 text-neutral-500 mb-1">
+            <Coins size={16} />
+            <span className="text-[10px] font-black uppercase tracking-wider">Treasury & Collections</span>
+          </div>
+          <h1 className="text-2xl md:text-3xl font-black text-neutral-900 tracking-tight">Financial Hub</h1>
+          <p className="text-xs text-neutral-500 font-medium mt-1">Review your portfolio revenue and penalize overdue ledgers.</p>
         </div>
 
-        <div className="flex flex-wrap gap-3 bg-white p-3 rounded-[32px] border border-gray-100 shadow-xl shadow-gray-200/50">
-          <div className="flex items-center gap-2 px-4 border-r border-gray-100">
-            <Home size={14} className="text-blue-500" />
-            <select className="text-[11px] font-black text-[#1F2937] bg-transparent outline-none cursor-pointer" value={filters.property} onChange={(e) => setFilters({...filters, property: e.target.value})}>
+        <div className="flex flex-wrap gap-2 bg-neutral-100/80 p-1.5 rounded-2xl w-fit border border-neutral-200/50 shadow-3xs">
+          <div className="flex items-center gap-2 px-3 border-r border-neutral-200/50">
+            <CreditCard size={14} className="text-neutral-500" />
+            <select className="text-[10px] font-extrabold text-neutral-900 bg-transparent outline-none cursor-pointer uppercase tracking-wider" value={filters.type} onChange={(e) => setFilters({...filters, type: e.target.value})}>
+              <option value="all">All Types</option>
+              <option value="rent">Rent Only</option>
+              <option value="deposit">Deposit Only</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-2 px-3 border-r border-neutral-200/50">
+            <Home size={14} className="text-neutral-500" />
+            <select className="text-[10px] font-extrabold text-neutral-900 bg-transparent outline-none cursor-pointer uppercase tracking-wider" value={filters.property} onChange={(e) => setFilters({...filters, property: e.target.value})}>
               <option value="all">All Properties</option>
               {uniqueProperties.map((addr: any) => <option key={addr} value={addr}>{addr.split(',')[0]}</option>)}
             </select>
           </div>
-          <div className="flex items-center gap-2 px-4 border-r border-gray-100">
-            <Calendar size={14} className="text-emerald-500" />
-            <select className="text-[11px] font-black text-[#1F2937] bg-transparent outline-none cursor-pointer" value={filters.month} onChange={(e) => setFilters({...filters, month: e.target.value})}>
+          <div className="flex items-center gap-2 px-3 border-r border-neutral-200/50">
+            <Calendar size={14} className="text-neutral-500" />
+            <select className="text-[10px] font-extrabold text-neutral-900 bg-transparent outline-none cursor-pointer uppercase tracking-wider" value={filters.month} onChange={(e) => setFilters({...filters, month: e.target.value})}>
               <option value="all">All Months</option>
               {["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map(m => <option key={m} value={m}>{m}</option>)}
             </select>
           </div>
-          <div className="flex items-center gap-2 px-4">
-            <Filter size={14} className="text-orange-500" />
-            <select className="text-[11px] font-black text-[#1F2937] bg-transparent outline-none cursor-pointer" value={filters.status} onChange={(e) => setFilters({...filters, status: e.target.value})}>
+          <div className="flex items-center gap-2 px-3">
+            <AlertCircle size={14} className="text-neutral-500" />
+            <select className="text-[10px] font-extrabold text-neutral-900 bg-transparent outline-none cursor-pointer uppercase tracking-wider" value={filters.status} onChange={(e) => setFilters({...filters, status: e.target.value})}>
               <option value="all">All Status</option>
               <option value="paid">Paid</option>
               <option value="overdue">Overdue</option>
@@ -143,115 +205,212 @@ const stats = useMemo(() => {
         </div>
       </header>
 
-      {/* 📊 SUMMARY CARDS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-[#1F2937] p-8 rounded-[48px] text-white shadow-2xl relative overflow-hidden group">
-          <Target className="absolute -right-4 -bottom-4 text-white/5 group-hover:scale-110 transition-transform" size={120} />
-          <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2">Net Filtered Revenue</p>
-          <h3 className="text-4xl font-black text-white tracking-tighter">₹{stats.totalCollected.toLocaleString()}</h3>
-        </div>
-        <div className="bg-white p-8 rounded-[48px] border border-gray-100 shadow-sm flex flex-col justify-between">
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Pending Receivables</p>
-          <h3 className="text-4xl font-black text-red-500 tracking-tighter">₹{stats.totalPending.toLocaleString()}</h3>
-        </div>
-        <div className="bg-white p-8 rounded-[48px] border border-gray-100 shadow-sm flex flex-col justify-between">
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Matched Records</p>
-          <h3 className="text-4xl font-black text-blue-600 tracking-tighter">{stats.count}</h3>
-        </div>
+      {/* 📊 SUMMARY CARDS (Small, icon-less, black-related text, 4 per row) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: "Total Security Deposits", val: stats.totalDeposit },
+          { label: "Total Rent Collected", val: stats.totalCollected },
+          { label: "Pending Rent Amount", val: stats.totalPending },
+          { label: "Rent Debits (Credits)", val: stats.totalDebits },
+          { label: "Earned Penalty Money", val: stats.totalPenalties },
+          { label: "Maintenance Pro Payments", val: stats.proPayments },
+        ].map((stat, i) => (
+          <motion.div 
+            key={i} 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1 }}
+            className="bg-white p-5 rounded-2xl border border-neutral-200/80 shadow-2xs flex flex-col justify-center"
+          >
+            <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">{stat.label}</p>
+            <p className="text-xl font-black text-neutral-950">₹{stat.val.toLocaleString('en-IN')}</p>
+          </motion.div>
+        ))}
       </div>
 
-      {/* 🧾 DATA TABLE */}
-      <div className="bg-white rounded-[48px] border border-gray-100 shadow-xl shadow-gray-200/50 overflow-hidden">
-        <div className="p-8 border-b border-gray-50 flex justify-between items-center bg-gray-50/30">
-          <h2 className="text-xl font-black text-[#1F2937] tracking-tight">Cycle Status Table</h2>
+      {/* 🧾 PREMIUM CYCLE STATUS TABLE */}
+      <div className="bg-white rounded-2xl border border-neutral-200/80 shadow-2xs overflow-hidden mt-6">
+        <div className="p-5 border-b border-neutral-200 flex justify-between items-center bg-neutral-50/50">
+          <h2 className="text-sm font-extrabold text-neutral-950 uppercase tracking-widest">Cycle Status Registry</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-white border-b border-gray-50">
-                <th className="px-10 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Tenant Details</th>
-                <th className="px-6 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Amount</th>
-                <th className="px-6 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Late Fee Toggle</th>
-                <th className="px-6 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Status</th>
-                <th className="px-10 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
+              <tr className="border-b border-neutral-100">
+                <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest bg-white">Property</th>
+                <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest bg-white">Tenant</th>
+                <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest bg-white">Month</th>
+                <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest bg-white">Type</th>
+                <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest bg-white">Amount</th>
+                <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest bg-white text-center">Late Fee Toggle</th>
+                <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest bg-white text-right">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
-              {filteredData.map((item) => (
-                <tr key={item._id} className="hover:bg-gray-50/50 transition-colors group">
-                  <td className="px-10 py-8">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-400 group-hover:text-blue-600 transition-all"><User size={20} /></div>
-                      <div>
-                        <p className="text-sm font-black text-[#1F2937] uppercase">{item.tenantId?.name || "Tenant"}</p>
-                        <p className="text-[10px] font-bold text-gray-400 mt-1">{item.propertyId?.address.split(',')[0]}</p>
+            <tbody className="divide-y divide-neutral-100 bg-white">
+              <AnimatePresence>
+                {filteredData.map((item) => (
+                  <motion.tr 
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                    key={item._id} 
+                    className="hover:bg-neutral-50/50 transition-colors group"
+                  >
+                    {/* 1. Property */}
+                    <td className="px-6 py-4">
+                      <p className="text-xs font-extrabold text-neutral-900 truncate max-w-[150px]">{item.propertyId?.address.split(',')[0]}</p>
+                    </td>
+
+                    {/* 2. Tenant */}
+                    <td className="px-6 py-4">
+                      <p className="text-[11px] font-bold text-neutral-500 uppercase flex items-center gap-1.5"><User size={12}/>{item.tenantId?.name || "Tenant"}</p>
+                    </td>
+
+                    {/* 3. Cycle Month */}
+                    <td className="px-6 py-4">
+                      <p className="text-[11px] font-bold text-neutral-500 uppercase">{item.month?.substring(0,3)} '{String(item.year).slice(-2)}</p>
+                    </td>
+
+                    {/* 4. Type */}
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-widest border ${item.type === 'deposit' ? 'bg-neutral-50 text-neutral-600 border-neutral-200' : 'bg-neutral-950 text-white border-black'}`}>
+                        {item.type}
+                      </span>
+                    </td>
+
+                    {/* 5. Amount & View Breakdown Button */}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <p className="text-sm font-black text-neutral-950">
+                          ₹{(item.amount ?? item.totalAmountPaid ?? 0).toLocaleString('en-IN')}
+                        </p>
+                        {item.type === 'rent' && (
+                          <button 
+                            onClick={() => setSelectedItem(item)}
+                            className="px-2 py-1 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 transition-all"
+                          >
+                            <Eye size={10} /> View
+                          </button>
+                        )}
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-8">
-                    <p className="text-sm font-black text-[#1F2937]">
-  ₹{(item.amount ?? item.totalAmountPaid ?? 0).toLocaleString()}
-</p>
-                    <p className="text-[9px] font-bold text-gray-400 uppercase mt-1">{item.month} {item.year}</p>
-                  </td>
-                  <td className="px-6 py-8">
-                    <div className="flex justify-center">
-                      <button onClick={() => togglePenalty(item._id)} className={`w-10 h-5 rounded-full transition-all relative p-1 ${!disabledPenalties.has(item._id) ? 'bg-orange-500' : 'bg-gray-200'}`}>
-                        <div className={`w-3 h-3 bg-white rounded-full transition-all shadow-sm ${!disabledPenalties.has(item._id) ? 'translate-x-5' : 'translate-x-0'}`}/>
-                      </button>
-                    </div>
-                  </td>
-                  <td className="px-6 py-8 text-center">
-                    <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase border tracking-widest ${item.status === 'overdue' ? 'bg-red-50 text-red-500 border-red-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
-                      {item.status}
-                    </span>
-                  </td>
-                  <td className="px-10 py-8 text-right">
-                    {item.status === 'overdue' ? (
-                      <button className="p-3 bg-[#1F2937] text-white rounded-xl hover:bg-black transition-all shadow-lg active:scale-95"><BellRing size={16} /></button>
-                    ) : (
-                      <div className="flex items-center justify-end text-emerald-500 gap-2"><BadgeCheck size={20} /><span className="text-[9px] font-black uppercase italic">Verified</span></div>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                    </td>
+
+                    {/* 6. Late Fee Toggle */}
+                    <td className="px-6 py-4 align-middle">
+                      {item.type === 'rent' ? (
+                        <div className="flex justify-center items-center h-full">
+                          <button 
+                            onClick={() => togglePenalty(item)} 
+                            disabled={actionLoading === `toggle_${item._id}`}
+                            className={`w-9 h-5 rounded-full transition-all relative p-1 ${item.breakdown?.isLateFeeWaived ? 'bg-neutral-200' : 'bg-neutral-950'}`}
+                            title={item.breakdown?.isLateFeeWaived ? "Penalty Waived" : "Penalty Active"}
+                          >
+                            <div className={`w-3 h-3 bg-white rounded-full transition-all shadow-sm ${item.breakdown?.isLateFeeWaived ? 'translate-x-0' : 'translate-x-4'}`}/>
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="text-center text-[10px] text-neutral-300 font-bold">-</div>
+                      )}
+                    </td>
+
+                    {/* 7. Status */}
+                    <td className="px-6 py-4 text-right">
+                      {item.status === 'overdue' ? (
+                        <div className="flex items-center justify-end gap-2">
+                           <span className="px-3 py-1 rounded-md text-[9px] font-bold uppercase tracking-widest bg-red-50 text-red-600 border border-red-100">
+                             Overdue
+                           </span>
+                           {item.type === "rent" && (
+                             <button 
+                               onClick={() => handleNudge(item)}
+                               disabled={actionLoading === `nudge_${item._id}`}
+                               className="w-7 h-7 bg-red-600 text-white rounded flex items-center justify-center hover:bg-red-700 transition-all disabled:opacity-50"
+                               title="Send Nudge"
+                             >
+                               {actionLoading === `nudge_${item._id}` ? <Loader2 size={12} className="animate-spin" /> : <BellRing size={12} />}
+                             </button>
+                           )}
+                        </div>
+                      ) : item.status === 'pending' ? (
+                        <span className="px-3 py-1 rounded-md text-[9px] font-bold uppercase tracking-widest bg-amber-50 text-amber-600 border border-amber-100">
+                          Pending
+                        </span>
+                      ) : (
+                        <div className="flex items-center justify-end text-emerald-600 gap-1">
+                          <CheckCircle2 size={14} />
+                          <span className="text-[9px] font-black uppercase tracking-widest">Verified</span>
+                        </div>
+                      )}
+                    </td>
+                  </motion.tr>
+                ))}
+              </AnimatePresence>
             </tbody>
           </table>
+          {filteredData.length === 0 && (
+             <div className="p-16 text-center text-neutral-400 font-bold text-sm">No ledgers found for these filters.</div>
+          )}
         </div>
       </div>
 
-      {/* 📊 BOTTOM ANALYTICS */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pb-20">
-        <div className="bg-white p-10 rounded-[56px] border border-gray-100 shadow-sm space-y-8">
-          <div><h3 className="text-xl font-black text-[#1F2937] tracking-tight">Revenue Breakdown</h3><p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Collected vs. Unpaid</p></div>
-          <div className="h-[350px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#9CA3AF' }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#9CA3AF' }} />
-                <Tooltip cursor={{ fill: '#F9FAFB' }} contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }} />
-                <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' }} />
-                <Bar name="Collected" dataKey="collected" fill="#10B981" radius={[10, 10, 0, 0]} barSize={35} />
-                <Bar name="Overdue" dataKey="pending" fill="#F87171" radius={[10, 10, 0, 0]} barSize={35} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+      {/* ── Breakdown Modal ───────────────────────────────── */}
+      <AnimatePresence>
+        {selectedItem && (
+          <div className="fixed inset-0 z-[200] bg-neutral-950/65 backdrop-blur-xs flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.96 }} 
+              animate={{ opacity: 1, scale: 1 }} 
+              exit={{ opacity: 0, scale: 0.96 }} 
+              className="bg-white w-full max-w-md rounded-2xl overflow-hidden shadow-2xl border border-neutral-200/80"
+            >
+              <div className="p-5 border-b border-neutral-200 flex justify-between items-center bg-neutral-50/50">
+                <div>
+                  <h2 className="text-sm font-extrabold text-neutral-950">Financial Breakdown</h2>
+                  <p className="text-neutral-400 text-[10px] font-bold uppercase mt-0.5 tracking-wider">
+                    {selectedItem.month} {selectedItem.year} Cycle
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setSelectedItem(null)} 
+                  className="w-8 h-8 bg-white border border-neutral-200 rounded-lg flex items-center justify-center text-neutral-400 hover:text-neutral-800 transition-all shadow-3xs cursor-pointer"
+                >
+                   <XCircle size={16} />
+                </button>
+              </div>
 
-        <div className="bg-[#1F2937] p-10 rounded-[56px] shadow-2xl space-y-8">
-          <div><h3 className="text-xl font-black text-white tracking-tight">Portfolio Pulse</h3><p className="text-xs text-blue-400 font-bold uppercase tracking-widest mt-1">Total Potential Revenue</p></div>
-          <div className="h-[350px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#6B7280' }} />
-                <Tooltip contentStyle={{ borderRadius: '24px', border: 'none', background: '#2D3748', color: '#FFF' }} itemStyle={{ color: '#60A5FA' }} />
-                <Bar dataKey="total" fill="#3B82F6" radius={[20, 20, 20, 20]} barSize={50} />
-              </BarChart>
-            </ResponsiveContainer>
+              <div className="p-6 space-y-6">
+                <div className="flex items-center gap-4 border-b border-neutral-100 pb-4">
+                  <div className="w-12 h-12 bg-neutral-100 text-neutral-900 rounded-xl flex items-center justify-center shrink-0 border border-neutral-200/40">
+                    <FileText size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-neutral-950 text-sm">{selectedItem.propertyId?.address.split(',')[0]}</h3>
+                    <p className="text-[10px] text-neutral-500 font-bold uppercase mt-0.5">Tenant: {selectedItem.tenantId?.name}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center p-3 bg-neutral-50 rounded-xl border border-neutral-200/50">
+                     <span className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Base Rent</span>
+                     <span className="text-sm font-black text-neutral-950">₹{selectedItem.breakdown?.base || 0}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-neutral-50 rounded-xl border border-neutral-200/50">
+                     <span className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Maintenance Credit</span>
+                     <span className="text-sm font-black text-amber-500">-₹{selectedItem.breakdown?.credit || 0}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-neutral-50 rounded-xl border border-neutral-200/50">
+                     <span className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Late Penalty</span>
+                     <span className="text-sm font-black text-red-500">+₹{selectedItem.breakdown?.penalty || 0}</span>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-neutral-200 flex justify-between items-center">
+                  <span className="text-xs font-black text-neutral-950 uppercase tracking-widest">Final Ledger Total</span>
+                  <span className="text-2xl font-black text-neutral-950">₹{(selectedItem.amount ?? selectedItem.totalAmountPaid ?? 0).toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

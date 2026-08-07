@@ -16,6 +16,7 @@ export default function TenantLedger() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [payingMonth, setPayingMonth] = useState<string | null>(null);
+  const [nudges, setNudges] = useState<any[]>([]);
 
   useEffect(() => {
     fetchUserAndLedger();
@@ -28,10 +29,21 @@ export default function TenantLedger() {
       const userData = await userRes.json();
       setUser(userData.user);
       
-      // Fetch ledger
-      const res = await fetch(`/api/payments/ledger`);
-      const d = await res.json();
-      if (res.ok) setData(d);
+      // Fetch ledger & activities
+      const [ledgerRes, activityRes] = await Promise.all([
+        fetch(`/api/payments/ledger`),
+        fetch(`/api/activity/get`)
+      ]);
+      
+      if (ledgerRes.ok) setData(await ledgerRes.json());
+      if (activityRes.ok) {
+        const actData = await activityRes.json();
+        // Get active rent reminder nudges
+        const activeNudges = actData.activities?.filter((a: any) => 
+          (a.category === "alert" || a.title === "Rent Reminder") && a.createdAt > (Date.now() - 7 * 24 * 60 * 60 * 1000)
+        );
+        setNudges(activeNudges || []);
+      }
     } catch (err) {
       console.error("Ledger sync failed:", err);
     } finally {
@@ -158,6 +170,19 @@ export default function TenantLedger() {
             </div>
           </div>
         </header>
+
+        {/* 🚨 NUDGE ALERT BANNER */}
+        {nudges.length > 0 && data?.ledger?.some((item: any) => item.status !== "Paid") && (
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="p-6 bg-red-50 border border-red-200 rounded-[32px] flex items-start md:items-center gap-5 shadow-xl shadow-red-500/5">
+            <div className="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center shrink-0 text-white shadow-lg shadow-red-500/20">
+              <AlertTriangle size={24} />
+            </div>
+            <div>
+              <h3 className="text-red-900 font-black text-lg uppercase tracking-tight">Urgent: {nudges[0].title}</h3>
+              <p className="text-red-700/80 font-medium text-sm mt-1">{nudges[0].desc || nudges[0].message}</p>
+            </div>
+          </motion.div>
+        )}
 
         <div className="space-y-6">
           {data?.ledger.map((item: any, i: number) => (

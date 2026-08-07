@@ -290,10 +290,6 @@ export default function MaintenanceQueue() {
                   
                   <div className="grid grid-cols-2 gap-2.5 mb-5 text-[10px]">
                     <div className="bg-neutral-50 p-2.5 rounded-xl border border-neutral-200">
-                      <p className="text-neutral-400 font-bold uppercase tracking-wide mb-1">Status</p>
-                      <p className="font-extrabold text-neutral-800 capitalize">{issue.status?.replace(/_/g, " ")}</p>
-                    </div>
-                    <div className="bg-neutral-50 p-2.5 rounded-xl border border-neutral-200">
                       <p className="text-neutral-400 font-bold uppercase tracking-wide mb-1">Responsibility</p>
                       <p className="font-extrabold text-neutral-800 capitalize">{issue.responsibility}</p>
                     </div>
@@ -304,6 +300,10 @@ export default function MaintenanceQueue() {
                     <div className="bg-neutral-50 p-2.5 rounded-xl border border-neutral-200">
                       <p className="text-neutral-400 font-bold uppercase tracking-wide mb-1">Final Cost</p>
                       <p className="font-black text-neutral-900 text-xs">₹{issue.finalInvoice?.amount || issue.estimatedCost || 0}</p>
+                    </div>
+                    <div className="bg-neutral-50 p-2.5 rounded-xl border border-neutral-200">
+                      <p className="text-neutral-400 font-bold uppercase tracking-wide mb-1">Completed</p>
+                      <p className="font-extrabold text-neutral-800">{new Date(issue.createdAt).toLocaleDateString()}</p>
                     </div>
                   </div>
 

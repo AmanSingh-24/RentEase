@@ -22,7 +22,7 @@ export async function GET() {
     })
       .populate(
         "propertyId",
-        "address city bhk rentAmount depositAmount listingImages status agreement ownerId structure maintenanceRules exitPolicy"
+        "address city bhk rentAmount depositAmount listingImages status agreement ownerId structure maintenanceRules exitPolicy leaseStartDate"
       )
       .sort({ createdAt: -1 });
 

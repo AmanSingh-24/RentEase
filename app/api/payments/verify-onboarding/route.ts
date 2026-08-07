@@ -8,7 +8,7 @@ import crypto from "crypto";
 export async function POST(request: Request) {
   try {
     await connectToDatabase();
-    const { userId, razorpay_order_id, razorpay_payment_id, razorpay_signature } = await request.json();
+    const { userId, razorpay_order_id, razorpay_payment_id, razorpay_signature, proratedRent } = await request.json();
 
     // 1. Verify Signature (Security Guard)
     const secret = process.env.RAZORPAY_KEY_SECRET!;
@@ -40,15 +40,16 @@ export async function POST(request: Request) {
       status: "completed"
     });
 
-    // 4. CREATE 1st MONTH RENT RECORD
+    // 4. CREATE 1st MONTH RENT RECORD (Using Prorated Rent)
+    const actualRentPaid = proratedRent !== undefined ? proratedRent : property.rentAmount;
     await Payment.create({
       propertyId: property._id,
       tenantId: userId,
       type: "rent",
       month: startMonth, // 🔥 Now correctly attributes payment to April (if lease starts April)
       year: startYear,
-      baseRent: property.rentAmount,
-      totalAmountPaid: property.rentAmount,
+      baseRent: actualRentPaid,
+      totalAmountPaid: actualRentPaid,
       gatewayTransactionId: razorpay_payment_id,
       status: "completed"
     });

@@ -391,9 +391,24 @@ export default function OwnerOnboardingPage() {
                       {/* First Month Rent log card */}
                       <div className="p-4 bg-white rounded-xl border border-neutral-200/80 shadow-3xs relative overflow-hidden">
                         <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider">First Month Rent</p>
-                        <p className="text-base font-black text-neutral-900 mt-1">
-                          ₹{Number(property.rentAmount || 0).toLocaleString("en-IN")}
-                        </p>
+                        
+                        <div className="flex items-end gap-2 mt-1">
+                          <p className="text-base font-black text-neutral-900">
+                            ₹{Number(rentPayment?.totalAmountPaid || property.rentAmount || 0).toLocaleString("en-IN")}
+                          </p>
+                          {rentPayment && rentPayment.totalAmountPaid < property.rentAmount && (
+                            <span className="text-[9px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-md mb-1">
+                              Prorated
+                            </span>
+                          )}
+                        </div>
+
+                        {rentPayment && rentPayment.totalAmountPaid < property.rentAmount && (
+                          <p className="text-[9px] text-neutral-400 mt-1 leading-snug font-medium">
+                            *This amount is lower than the full rent (₹{Number(property.rentAmount).toLocaleString()}) because it was prorated based on the exact move-in date.
+                          </p>
+                        )}
+
                         {rentPayment || !isAwaitingAction ? (
                           <div className="mt-2 text-[10px] text-emerald-600 font-bold flex items-center gap-1">
                             <CheckCircle size={12} /> Settlement Complete

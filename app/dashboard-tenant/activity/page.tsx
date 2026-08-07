@@ -27,9 +27,9 @@ export default function ActivityPage() {
         const res = await fetch(`/api/activity/get`);
         const data = await res.json();
         if (res.ok) {
-          // ✅ FIX: Catch both 'urgent' category and 'nudge' type for the red box
-          setAlerts(data.activities.filter((a: any) => a.category === "urgent" || a.type === "nudge"));
-          setActivities(data.activities.filter((a: any) => a.category !== "urgent" && a.type !== "nudge"));
+          // ✅ FIX: Catch 'urgent', 'alert' category and 'nudge' type for the red box
+          setAlerts(data.activities.filter((a: any) => a.category === "urgent" || a.category === "alert" || a.type === "nudge"));
+          setActivities(data.activities.filter((a: any) => a.category !== "urgent" && a.category !== "alert" && a.type !== "nudge"));
         }
       } catch (err) {
         console.error("Failed to load activity", err);

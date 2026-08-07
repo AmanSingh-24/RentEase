@@ -5,6 +5,7 @@ import Property from "@/models/Property";
 import Maintenance from "@/models/Maintenance";
 import User from "@/models/User";
 import { getSessionUser } from "@/lib/auth-helper";
+import { calculateLedgerItem } from "@/lib/financials";
 
 export async function GET(request: Request) {
   try {
@@ -15,11 +16,10 @@ export async function GET(request: Request) {
     if (session.role !== "tenant") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const user = await User.findById(session.id);
-    // Populate ownerId and maintenanceRules to get the threshold/grace period
     const property = await Property.findById(user.propertyId).populate("ownerId");
 
-    const leaseDate = new Date(property.leaseStartDate);
-    const currentDate = new Date(); // May 15, 2026
+    const leaseDate = property.leaseStartDate ? new Date(property.leaseStartDate) : new Date();
+    const currentDate = new Date(); 
     const ledger = [];
 
     // Loop from Lease Start Month to Current Month
@@ -29,7 +29,6 @@ export async function GET(request: Request) {
       const monthName = tempDate.toLocaleString('default', { month: 'long' });
       const year = tempDate.getFullYear();
 
-      // Check if a REAL payment exists in the DB for this month
       const paymentRecord = await Payment.findOne({
         propertyId: property._id,
         tenantId: session.id,
@@ -38,57 +37,22 @@ export async function GET(request: Request) {
         type: "rent"
       });
 
-      if (paymentRecord) {
+      const ledgerItem = await calculateLedgerItem(property, user, monthName, year, paymentRecord);
+      if (ledgerItem) {
         ledger.push({
-          month: monthName,
-          year: year,
-          status: "Paid",
-          amount: paymentRecord.totalAmountPaid,
-          date: paymentRecord.createdAt,
-          transactionId: paymentRecord.gatewayTransactionId
-        });
-      } else {
-        // 🚀 GENERATE DYNAMIC VIRTUAL INVOICE FOR PENDING MONTHS
-        
-        // 1. Calculate Penalty (It's May 15th, so > 10 days since 1st)
-        let penalty = 0;
-        if (property.latePenaltyEnabled !== false) { // Assuming it's enabled by default
-          const day = currentDate.getDate();
-          if (day > 10) penalty = Math.round(property.rentAmount * 0.10);
-          else if (day > 5) penalty = Math.round(property.rentAmount * 0.05);
-        }
-
-        // 2. Fetch Approved Maintenance Credits
-        const approvedRepairs = await Maintenance.find({
-          tenantId: session.id,
-          responsibility: "owner",
-          isAmountApproved: true,
-          isCredited: { $ne: true } // Pick repairs not yet "used up"
-        });
-
-        const totalCredit = approvedRepairs.reduce((sum, item) => sum + (item.finalInvoice?.amount || 0), 0);
-
-        // 3. Final Calculation
-        const finalPayable = (property.rentAmount + penalty) - totalCredit;
-
-        ledger.push({
-          month: monthName,
-          year: year,
-          status: "Pending",
-          amount: finalPayable,
-          // ✅ THIS BREAKDOWN OBJECT IS WHAT THE FRONTEND NEEDS
-          breakdown: {
-            base: property.rentAmount,
-            penalty: penalty,
-            credit: totalCredit
-          }
+          month: ledgerItem.month,
+          year: ledgerItem.year,
+          status: ledgerItem.status === "completed" ? "Paid" : "Pending",
+          amount: ledgerItem.amount,
+          breakdown: ledgerItem.breakdown,
+          date: paymentRecord ? paymentRecord.createdAt : null,
+          transactionId: paymentRecord ? paymentRecord.gatewayTransactionId : null
         });
       }
 
       tempDate.setMonth(tempDate.getMonth() + 1);
     }
 
-    // 4. Fetch overall active unapplied repair credits
     const unappliedRepairs = await Maintenance.find({
       tenantId: session.id,
       responsibility: "owner",
