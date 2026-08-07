@@ -22,6 +22,9 @@ export default function FinalSettlement({ params }: { params: Promise<{ id: stri
   const [deposit, setDeposit] = useState(0); 
   const [monthsCompleted, setMonthsCompleted] = useState(0);
 
+  const [payoutMethod, setPayoutMethod] = useState<"auto" | "manual">("auto");
+  const [manualTxnId, setManualTxnId] = useState("");
+
   useEffect(() => {
     fetchSettlementData();
   }, [exitId]);
@@ -98,16 +101,25 @@ export default function FinalSettlement({ params }: { params: Promise<{ id: stri
   const handleReleasePayout = async () => {
     setIsProcessing(true);
 
-    if (finalRefund === 0) {
+    if (finalRefund === 0 || payoutMethod === "manual") {
+      if (payoutMethod === "manual" && !manualTxnId && finalRefund > 0) {
+        alert("Please enter the manual transaction ID.");
+        setIsProcessing(false);
+        return;
+      }
       setTimeout(async () => {
         const res = await fetch("/api/exit/respond-notice", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ exitId, status: "payout_released" })
+          body: JSON.stringify({ 
+             exitId, 
+             status: "payout_released", 
+             transactionId: payoutMethod === "manual" ? manualTxnId : undefined 
+          })
         });
         if (res.ok) router.push("/dashboard-owner/exit");
         setIsProcessing(false);
-      }, 2000);
+      }, 1500);
       return;
     }
 
@@ -178,6 +190,32 @@ export default function FinalSettlement({ params }: { params: Promise<{ id: stri
               <p className="text-red-950 font-bold italic">"{data.exit.tenantDisputeComment}"</p>
            </div>
         </div>
+      )}
+
+      {/* 🟢 PAYOUT METHOD SELECTOR FOR APPROVED SETTLEMENTS */}
+      {isApproved && finalRefund > 0 && (
+        <div className="mb-10 p-8 bg-blue-50 border border-blue-100 rounded-[32px] flex flex-col md:flex-row justify-between items-center gap-6 shadow-sm">
+          <div>
+            <h3 className="text-xl font-black text-blue-900 mb-2">Tenant Approved Settlement</h3>
+            <p className="text-xs text-blue-700">Choose your payout method. Use Razorpay Route for automated disbursal, or record a manual bank transfer.</p>
+          </div>
+          <div className="flex bg-white p-2 rounded-2xl shadow-sm border border-blue-50">
+             <button onClick={() => setPayoutMethod('auto')} className={`px-6 py-3 rounded-xl font-bold text-xs transition-colors ${payoutMethod === 'auto' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:text-blue-600'}`}>Automated (Razorpay)</button>
+             <button onClick={() => setPayoutMethod('manual')} className={`px-6 py-3 rounded-xl font-bold text-xs transition-colors ${payoutMethod === 'manual' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:text-blue-600'}`}>Manual Transfer</button>
+          </div>
+        </div>
+      )}
+
+      {isApproved && finalRefund > 0 && payoutMethod === "manual" && (
+         <div className="mb-12 p-8 bg-white border border-gray-100 rounded-[32px] shadow-sm animate-in fade-in slide-in-from-top-4 duration-300">
+            <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-4 mb-2 block">Bank Reference / UTR Number</label>
+            <input 
+              placeholder="e.g. UPI/234908123098/REFUND" 
+              className="w-full p-6 bg-gray-50 border border-transparent rounded-[24px] text-sm font-bold outline-none focus:border-blue-200 focus:bg-white transition-all shadow-inner"
+              value={manualTxnId}
+              onChange={(e) => setManualTxnId(e.target.value)}
+            />
+         </div>
       )}
 
       {/* METRICS DISPATCH CARD SYSTEM */}

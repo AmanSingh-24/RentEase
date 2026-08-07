@@ -29,7 +29,7 @@ const ExitProcessSchema = new mongoose.Schema({
   // ✅ Store the tenant's dispute reason
   tenantDisputeComment: { type: String, default: "" },
 
-  moveOutPhotos: [{ area: String, url: String, comment: String }],
+  moveOutPhotos: [{ area: String, url: String, comment: String, condition: String }],
 
   inspectionDate: Date,
   inspectorName: String,
@@ -41,6 +41,6 @@ const ExitProcessSchema = new mongoose.Schema({
   isTenantSatisfied: { type: Boolean, default: false }, 
   
   createdAt: { type: Date, default: Date.now }
-});
+}, { timestamps: true });
 
 export default mongoose.models.ExitProcess || mongoose.model("ExitProcess", ExitProcessSchema);

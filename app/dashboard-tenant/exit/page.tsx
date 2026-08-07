@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   Calendar, CheckCircle, ArrowRight, Loader2, Hourglass, 
   Send, ShieldCheck, Clock, Download, DollarSign, Heart, 
-  MessageSquareWarning, X, LogOut, User, FileText
+  MessageSquareWarning, X, LogOut, User, FileText, Camera
 } from "lucide-react";
 
 export default function TenantExitManager() {
@@ -20,7 +20,9 @@ export default function TenantExitManager() {
   const [proposedDate, setProposedDate] = useState("");
   const [reason, setReason] = useState("");
   const [newProposedDate, setNewProposedDate] = useState("");
-  const [ids, setIds] = useState({ propertyId: "", ownerId: "" });
+  const [ids, setIds] = useState({ propertyId: "", ownerId: "", tenantId: "" });
+  const [photos, setPhotos] = useState<{area: string, url: string, condition?: string}[]>([]);
+  const [comparisonGrid, setComparisonGrid] = useState<any[]>([]);
 
   const minDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
@@ -28,10 +30,14 @@ export default function TenantExitManager() {
 
   const initialize = async () => {
     try {
+      const authRes = await fetch('/api/auth/me');
+      const authData = await authRes.json();
+      const currentTenantId = authData.user?._id;
+
       const propRes = await fetch(`/api/properties/get-by-tenant`);
       const propData = await propRes.json();
-      if (propRes.ok && propData.property) {
-        setIds({ propertyId: propData.property._id, ownerId: propData.property.ownerId });
+      if (propRes.ok && propData.property && currentTenantId) {
+        setIds({ propertyId: propData.property._id, ownerId: propData.property.ownerId, tenantId: currentTenantId });
       }
       fetchStatus();
     } catch (err) { console.error("Initialization failed", err); }
@@ -42,7 +48,32 @@ export default function TenantExitManager() {
       const res = await fetch(`/api/exit/get-status`);
       const data = await res.json();
       if (res.ok && data.exit) {
-        setExitData(data.exit);
+        let exit = data.exit;
+
+        // 👻 GHOST TENANT TRIGGER
+        if (exit.status === "notice_accepted" && exit.moveOutDate) {
+           const moveOut = new Date(exit.moveOutDate);
+           moveOut.setHours(0,0,0,0);
+           const today = new Date();
+           today.setHours(0,0,0,0);
+           if (today >= moveOut) {
+              await fetch("/api/exit/respond-notice", {
+                 method: "PUT",
+                 headers: { "Content-Type": "application/json" },
+                 body: JSON.stringify({ exitId: exit._id, status: "physical_inspection_required" })
+              });
+              exit.status = "physical_inspection_required";
+           }
+        }
+
+        setExitData(exit);
+        
+        // 📸 FETCH DYNAMIC COMPARISON GRID FOR THE UPLOAD MATRIX
+        const compRes = await fetch(`/api/exit/get-comparison?exitId=${exit._id}`);
+        const compData = await compRes.json();
+        if (compRes.ok && compData.comparisonGrid) {
+           setComparisonGrid(compData.comparisonGrid);
+        }
         
         // 🕒 AUTOMATED RE-COUPLING CRON SHIELD
         if (data.exit.status === "payout_released") {
@@ -142,7 +173,9 @@ export default function TenantExitManager() {
             </div>
             <textarea placeholder="Reason for leaving..." rows={4} onChange={(e) => setReason(e.target.value)} className="w-full p-8 bg-gray-50 rounded-[32px] font-bold outline-none border-2 border-transparent focus:border-blue-100" />
           </div>
-          <button onClick={async () => {
+          <button 
+             disabled={!proposedDate || isSubmitting}
+             onClick={async () => {
               setIsSubmitting(true);
               await fetch("/api/exit/serve-notice", {
                 method: "POST",
@@ -150,7 +183,7 @@ export default function TenantExitManager() {
                 body: JSON.stringify({ ...ids, moveOutDate: proposedDate, reason })
               });
               fetchStatus();
-          }} className="w-full py-8 bg-[#1F2937] text-white rounded-[32px] font-black uppercase text-xs">Serve Notice</button>
+          }} className="w-full py-8 bg-[#1F2937] text-white rounded-[32px] font-black uppercase text-xs disabled:opacity-30">Serve Notice</button>
         </div>
       )}
 
@@ -167,6 +200,12 @@ export default function TenantExitManager() {
             <div className="space-y-8">
               <Clock className="mx-auto text-orange-500 animate-pulse" size={48} />
               <h2 className="text-2xl font-bold">Landlord Alternative Term</h2>
+
+              <div className="p-6 bg-orange-50 rounded-3xl border border-orange-100 max-w-sm mx-auto shadow-inner">
+                <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-1">Landlord Proposed Date</p>
+                <p className="text-3xl font-black text-orange-900">{new Date(exitData.moveOutDate).toLocaleDateString()}</p>
+              </div>
+
               <div className="flex flex-col gap-4 max-w-sm mx-auto">
                 <button onClick={() => handleAction("notice_accepted")} className="py-6 bg-emerald-500 text-white rounded-[32px] font-black text-xs">Accept & Lock Calendar Target</button>
                 <input type="date" min={minDate} onChange={(e) => setNewProposedDate(e.target.value)} className="p-6 bg-gray-50 rounded-[32px] font-bold text-sm outline-none" />
@@ -179,10 +218,104 @@ export default function TenantExitManager() {
 
       {/* LAYER 3: CONDITIONS MATRIX SUBMISSION COUNTERBLOCKS */}
       {status === "notice_accepted" && (
-        <div className="bg-white border border-gray-100 rounded-[56px] p-12 text-center shadow-sm">
-          <CheckCircle className="mx-auto text-emerald-500 mb-6" size={48} />
-          <h2 className="text-3xl font-black">Calendar Term Synchronized</h2>
-          <p className="text-gray-400 font-medium">Locked for: {new Date(exitData.moveOutDate).toLocaleDateString()}</p>
+        <div className="bg-white border border-gray-100 rounded-[56px] p-12 shadow-sm text-center">
+          {!canStartAudit ? (
+             <>
+               <CheckCircle className="mx-auto text-emerald-500 mb-6" size={48} />
+               <h2 className="text-3xl font-black">Calendar Term Synchronized</h2>
+               <p className="text-gray-400 font-medium">Locked for: {new Date(exitData.moveOutDate).toLocaleDateString()}</p>
+               <p className="text-xs text-blue-500 font-bold mt-4">Digital Witness unlocks on {auditStartDate?.toLocaleDateString()}</p>
+             </>
+          ) : (
+             <div className="space-y-8 text-left">
+               <div className="text-center mb-10">
+                 <Camera className="mx-auto text-blue-600 mb-4" size={48} />
+                 <h2 className="text-3xl font-black">Digital Witness Open</h2>
+                 <p className="text-gray-500 font-medium mt-2">Submit your current room photos for the final exit comparison. Failure to submit before move-out day forfeits your dispute rights.</p>
+               </div>
+               
+               <div className="grid grid-cols-2 gap-4">
+                 {comparisonGrid.map(item => {
+                    const area = item.area;
+                    const uploaded = photos.find(p => p.area === area);
+                    return (
+                      <div key={area} className="relative bg-gray-50 rounded-[32px] border-2 border-dashed border-gray-200 p-6 flex flex-col items-center justify-center min-h-[220px] group overflow-hidden">
+                        {uploaded ? (
+                           <>
+                             <img src={uploaded.url} className="absolute inset-0 w-full h-full object-cover opacity-60" />
+                             <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center">
+                               <CheckCircle className="text-emerald-400 mb-2" size={32} />
+                               <span className="text-white font-bold text-[10px] uppercase bg-black/50 px-3 py-1 rounded-full">{uploaded.condition}</span>
+                             </div>
+                             <button onClick={() => setPhotos(prev => prev.filter(p => p.area !== area))} className="absolute top-4 right-4 bg-red-500 text-white p-2 rounded-full z-10 hover:bg-red-600 transition-colors shadow-lg"><X size={14}/></button>
+                           </>
+                        ) : (
+                           <div className="w-full flex flex-col items-center z-10 space-y-3">
+                             <Camera className="text-gray-400 group-hover:text-blue-500 transition-colors" size={24} />
+                             <span className="font-bold text-gray-500 text-sm group-hover:text-blue-600 text-center leading-tight">{area}</span>
+                             
+                             <div className="w-full mt-4">
+                                <select 
+                                   id={`select-${area.replace(/\s+/g, '-')}`}
+                                   className="w-full bg-white border border-gray-200 rounded-xl p-3 text-[10px] font-black uppercase tracking-widest outline-none text-gray-600 mb-3 shadow-sm hover:border-blue-300 transition-colors"
+                                >
+                                   <option value="Good">Condition: Good</option>
+                                   <option value="Fair">Condition: Fair</option>
+                                   <option value="Poor">Condition: Poor</option>
+                                </select>
+                                <div className="flex gap-2">
+                                  <button 
+                                    onClick={() => document.getElementById(`file-${area.replace(/\s+/g, '-')}`)?.click()}
+                                    className="flex-1 py-3 bg-blue-50 text-blue-600 rounded-xl font-bold text-xs hover:bg-blue-600 hover:text-white transition-colors"
+                                  >
+                                    Upload
+                                  </button>
+                                  <button 
+                                    onClick={() => document.getElementById(`camera-${area.replace(/\s+/g, '-')}`)?.click()}
+                                    className="flex-1 py-3 bg-emerald-50 text-emerald-600 rounded-xl font-bold text-xs hover:bg-emerald-600 hover:text-white transition-colors flex items-center justify-center gap-1"
+                                  >
+                                    <Camera size={14} /> Snap
+                                  </button>
+                                </div>
+                             </div>
+                             <input id={`file-${area.replace(/\s+/g, '-')}`} type="file" accept="image/*" className="hidden" onChange={(e) => {
+                                if(e.target.files && e.target.files[0]) {
+                                   const reader = new FileReader();
+                                   reader.onload = (ev) => {
+                                      const condition = (document.getElementById(`select-${area.replace(/\s+/g, '-')}`) as HTMLSelectElement)?.value || 'Good';
+                                      const url = ev.target?.result as string;
+                                      setPhotos(prev => [...prev.filter(p => p.area !== area), { area, url, condition }]);
+                                   };
+                                   reader.readAsDataURL(e.target.files[0]);
+                                }
+                             }} />
+                             <input id={`camera-${area.replace(/\s+/g, '-')}`} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => {
+                                if(e.target.files && e.target.files[0]) {
+                                   const reader = new FileReader();
+                                   reader.onload = (ev) => {
+                                      const condition = (document.getElementById(`select-${area.replace(/\s+/g, '-')}`) as HTMLSelectElement)?.value || 'Good';
+                                      const url = ev.target?.result as string;
+                                      setPhotos(prev => [...prev.filter(p => p.area !== area), { area, url, condition }]);
+                                   };
+                                   reader.readAsDataURL(e.target.files[0]);
+                                }
+                             }} />
+                           </div>
+                        )}
+                      </div>
+                    )
+                 })}
+               </div>
+               
+               <button 
+                 disabled={comparisonGrid.length === 0 || photos.length < comparisonGrid.length || isSubmitting} 
+                 onClick={() => handleAction("photos_submitted", { moveOutPhotos: photos })} 
+                 className="w-full py-6 bg-blue-600 text-white rounded-[32px] font-black text-xs uppercase tracking-widest disabled:opacity-30 mt-6 shadow-xl shadow-blue-600/20 active:scale-95 transition-all"
+               >
+                 {photos.length < comparisonGrid.length ? `Upload all ${comparisonGrid.length} photos to submit` : "Submit Evidence Matrix"}
+               </button>
+             </div>
+          )}
         </div>
       )}
 

@@ -28,10 +28,9 @@ export async function GET(request: Request) {
     // 1. Fetch Move-In Baseline
     const moveInInspection = await Inspection.findOne({ propertyId: propertyObj._id, type: "move-in" });
 
-    // 2. Fetch all Resolved Maintenance for this property during the tenancy
+    // 2. Fetch all Maintenance for this property during the tenancy
     const maintenanceRecords = await Maintenance.find({ 
-      propertyId: propertyObj._id, 
-      status: "resolved" 
+      propertyId: propertyObj._id 
     });
 
     let comparisonGrid = [];
@@ -39,32 +38,52 @@ export async function GET(request: Request) {
 
     // Helper to check if item had maintenance
     const checkMaintenance = (room: string, item: string) => {
-       return maintenanceRecords.some(m => m.roomName === room && m.itemName === item);
+       const rec = maintenanceRecords.find(m => 
+         m.roomName?.toLowerCase() === room?.toLowerCase() && 
+         m.itemName?.toLowerCase() === item?.toLowerCase()
+       );
+       return {
+         hasMaintenance: !!rec,
+         comment: rec ? rec.description : null
+       };
     };
 
     if (moveInInspection && moveInInspection.report?.length > 0) {
-      comparisonGrid = moveInInspection.report.map((baseline: any, idx: number) => ({
-        roomName: baseline.roomName,
-        itemName: baseline.itemName,
-        area: `${baseline.roomName}: ${baseline.itemName}`,
-        baselineUrl: baseline.photoUrl,
-        proofUrl: tenantPhotos[idx]?.url || null,
-        hasMaintenance: checkMaintenance(baseline.roomName, baseline.itemName) // ✅ Flag
-      }));
+      comparisonGrid = moveInInspection.report.map((baseline: any) => {
+        const maint = checkMaintenance(baseline.roomName, baseline.itemName);
+        const areaName = `${baseline.roomName}: ${baseline.itemName}`;
+        const tPhoto = tenantPhotos.find((p: any) => p.area === areaName);
+        return {
+          roomName: baseline.roomName,
+          itemName: baseline.itemName,
+          area: areaName,
+          baselineUrl: baseline.photoUrl,
+          baselineCondition: baseline.condition || "Good",
+          proofUrl: tPhoto?.url || null,
+          condition: tPhoto?.condition || null,
+          hasMaintenance: maint.hasMaintenance,
+          maintenanceComment: maint.comment
+        };
+      });
     } else {
       // 🚀 FALLBACK: Property Structure
       let photoIdx = 0;
       propertyObj.structure.forEach((room: any) => {
         room.items.forEach((item: any) => {
+          const maint = checkMaintenance(room.roomName, item.itemName);
+          const areaName = `${room.roomName}: ${item.itemName}`;
+          const tPhoto = tenantPhotos.find((p: any) => p.area === areaName);
           comparisonGrid.push({
             roomName: room.roomName,
             itemName: item.itemName,
-            area: `${room.roomName}: ${item.itemName}`,
+            area: areaName,
             baselineUrl: null,
-            proofUrl: tenantPhotos[photoIdx]?.url || null,
-            hasMaintenance: checkMaintenance(room.roomName, item.itemName) // ✅ Flag
+            baselineCondition: item.baselineCondition || "Good",
+            proofUrl: tPhoto?.url || null,
+            condition: tPhoto?.condition || null,
+            hasMaintenance: maint.hasMaintenance,
+            maintenanceComment: maint.comment
           });
-          photoIdx++;
         });
       });
     }

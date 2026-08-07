@@ -53,8 +53,7 @@ export async function GET(request: Request) {
     const proMaintenance = await Maintenance.find({
       propertyId: { $in: propertyIds },
       responsibility: "owner",
-      status: "resolved",
-      causation: "pro_resolved"
+      status: { $in: ["resolved", "owner_led_fix"] }
     }).populate("tenantId");
 
     const finalReport = [

@@ -59,6 +59,18 @@ export default function OwnerExitInbox() {
     }
   };
 
+  const forceAccept = async (req: any) => {
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/exit/respond-notice", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ exitId: req._id, status: "notice_accepted", moveOutDate: req.moveOutDate })
+      });
+      if (res.ok) fetchRequests();
+    } finally { setIsSubmitting(false); }
+  };
+
   // 📋 LEDGER EXECUTIVE REPORT PRINT GENERATOR
   const triggerPrintLedger = (req: any) => {
     const printWindow = window.open("", "_blank");
@@ -220,7 +232,12 @@ export default function OwnerExitInbox() {
           <Hourglass size={14}/> Outbound Counter-Offers Sent
         </h2>
         <div className="grid gap-4">
-          {waitingForTenant.map((req: any) => (
+          {waitingForTenant.map((req: any) => {
+            const lastUpdated = req.updatedAt ? new Date(req.updatedAt).getTime() : new Date(req.createdAt).getTime();
+            const hoursElapsed = (Date.now() - lastUpdated) / (1000 * 60 * 60);
+            const is48hExpired = hoursElapsed >= 48;
+
+            return (
             <div key={req._id} className="bg-gray-50/50 border border-gray-100 p-8 rounded-[40px] flex items-center justify-between opacity-70">
               <div className="flex items-center gap-8">
                 <div className="w-14 h-14 rounded-3xl bg-white text-gray-300 flex items-center justify-center border border-gray-100"><Clock size={24} /></div>
@@ -229,11 +246,25 @@ export default function OwnerExitInbox() {
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Your Proposal: {new Date(req.moveOutDate).toLocaleDateString()}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase italic">
-                <span className="w-2 h-2 rounded-full bg-gray-300 animate-pulse" /> Awaiting Tenant Decoupling Accept
+              <div className="flex flex-col items-end gap-3">
+                <div className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase italic">
+                  <span className="w-2 h-2 rounded-full bg-gray-300 animate-pulse" /> Awaiting Tenant Decoupling Accept
+                </div>
+                <button 
+                  disabled={isSubmitting || !is48hExpired}
+                  onClick={() => forceAccept(req)}
+                  className={`text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-xl transition-colors border ${
+                    is48hExpired 
+                      ? "text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border-emerald-100" 
+                      : "text-gray-400 bg-gray-100 border-gray-200 cursor-not-allowed"
+                  }`}
+                >
+                  {is48hExpired ? "Force Accept (48h Expired)" : `Locked (${Math.max(0, Math.floor(48 - hoursElapsed))}h remaining)`}
+                </button>
               </div>
             </div>
-          ))}
+            )
+          })}
           {waitingForTenant.length === 0 && <p className="text-xs text-gray-300 font-bold uppercase italic ml-4">No pending outbound counter-offers.</p>}
         </div>
       </section>

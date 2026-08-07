@@ -12,6 +12,7 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
   const pathname = usePathname();
   const [hasProperty, setHasProperty] = useState<boolean | null>(null);
   const [inspectionStatus, setInspectionStatus] = useState<string>("none"); // none, pending, verified, rejected
+  const [isLockedOut, setIsLockedOut] = useState(false);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [collapsed, setCollapsed] = useState(false);
@@ -31,6 +32,18 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
             const insData = await insRes.json();
             if (insRes.ok && insData.inspection) {
               setInspectionStatus(insData.inspection.status);
+            }
+
+            const exitRes = await fetch('/api/exit/get-status');
+            const exitData = await exitRes.json();
+            if (exitRes.ok && exitData.exit && exitData.exit.moveOutDate) {
+               const moveOut = new Date(exitData.exit.moveOutDate);
+               moveOut.setHours(0,0,0,0);
+               const today = new Date();
+               today.setHours(0,0,0,0);
+               if (today >= moveOut) {
+                 setIsLockedOut(true);
+               }
             }
           }
         }
@@ -54,11 +67,11 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
     { name: "Applications", href: "/dashboard-tenant/applications", icon: ClipboardList, protected: false },
     { name: "Activity", href: "/dashboard-tenant/activity", icon: Bell, protected: false },
     { name: "Witness", href: "/dashboard-tenant/witness", icon: Camera, protected: false },
-    { name: "Messages", href: "/dashboard-tenant/messages", icon: MessageSquare, protected: true },
+    { name: "Messages", href: "/dashboard-tenant/messages", icon: MessageSquare, protected: true, alwaysOpenInExit: true },
     { name: "Maintenance", href: "/dashboard-tenant/maintenance", icon: Wrench, protected: true },
     { name: "Payments", href: "/dashboard-tenant/payments", icon: CreditCard, protected: true },
     { name: "Settings", href: "/dashboard-tenant/settings", icon: Settings, protected: false },
-    { name: "Exit", href: "/dashboard-tenant/exit", icon: LogOut, protected: true },
+    { name: "Exit", href: "/dashboard-tenant/exit", icon: LogOut, protected: true, alwaysOpenInExit: true },
   ];
 
   return (
@@ -100,7 +113,7 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
           {/* Nav Items */}
           <nav className="space-y-1">
             {navItems.map((item) => {
-              const isLocked = item.protected && inspectionStatus !== "verified";
+              const isLocked = (item.protected && inspectionStatus !== "verified") || (isLockedOut && !item.alwaysOpenInExit);
               const isActive = pathname === item.href;
               
               return (
@@ -147,7 +160,16 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
 
         {/* Main Viewport Content */}
         <main className="flex-1 bg-white p-4 md:p-6 lg:p-8 min-w-0">
-          {children}
+          {isLockedOut && !pathname.includes('/exit') && !pathname.includes('/messages') ? (
+             <div className="h-full min-h-[60vh] flex flex-col items-center justify-center text-center p-10 bg-red-50 rounded-[40px] border border-red-100">
+               <Lock className="text-red-500 mb-6" size={64} />
+               <h1 className="text-4xl font-black text-red-900 tracking-tighter">Dashboard Restricted</h1>
+               <p className="text-red-700/60 mt-4 max-w-md font-medium">Your tenancy at this property has concluded. You are currently in the Settlement Phase. Access to standard dashboard features has been revoked.</p>
+               <Link href="/dashboard-tenant/exit" className="mt-8 px-10 py-5 bg-red-500 text-white font-black text-xs uppercase tracking-widest rounded-3xl hover:bg-red-600 active:scale-95 transition-all">Go to Exit Portal</Link>
+             </div>
+          ) : (
+            children
+          )}
         </main>
       </div>
     </div>
