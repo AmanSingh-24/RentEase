@@ -13,10 +13,32 @@ export async function GET(request: Request) {
     if (!session) return NextResponse.json({ error: "Unauthorized session access" }, { status: 401 });
     if (session.role !== "owner") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    // Find all exit processes for this owner that aren't 'archived' or 'settled'
+    // --- LAZY 24-HOUR AUTO-SWEEP (Garbage Collection) ---
+    // Automatically archive any tenant who abandoned the portal after getting paid
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const staleRecords = await ExitProcess.find({
+      ownerId: session.id,
+      status: "payout_released",
+      updatedAt: { $lt: yesterday }
+    });
+
+    for (const stale of staleRecords) {
+      await ExitProcess.findByIdAndUpdate(stale._id, { status: "archived", updatedAt: new Date() });
+      await Property.findByIdAndUpdate(stale.propertyId, {
+        status: "vacant", 
+        listing_status: "active_marketplace",
+        tenantId: null, 
+        activeExitId: null,
+        $push: { pastTenants: { tenantId: stale.tenantId, movedOutAt: new Date(), exitRecordId: stale._id } }
+      });
+      await User.findByIdAndUpdate(stale.tenantId, { propertyId: null, isOnboarded: false });
+    }
+    // ----------------------------------------------------
+
+    // Find all exit processes for this owner
     const requests = await ExitProcess.find({ 
-      ownerId: session.id, 
-      status: { $ne: "archived" } 
+      ownerId: session.id,
+      status: { $in: ["notice_served", "notice_rescheduled", "notice_accepted", "photos_submitted", "physical_inspection_required", "physical_inspection_done", "inspection_completed", "settled", "disputed", "payout_released", "archived"] }
     })
     .populate({ path: "tenantId", select: "name email" })
     .populate({ path: "propertyId", select: "address" })

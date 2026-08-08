@@ -154,7 +154,7 @@ export default function TenantExitManager() {
   const auditStartDate = moveOut ? new Date(moveOut.getTime() - (7 * 24 * 60 * 60 * 1000)) : null;
   
   // ✅ FIX: Named consistently as settlementDate to match the UI blocks below
-  const settlementDate = moveOut ? new Date(moveOut.getTime() - (24 * 60 * 60 * 1000)).toLocaleDateString() : "";
+  const settlementDate = moveOut ? new Date(moveOut.getTime() + (14 * 24 * 60 * 60 * 1000)).toLocaleDateString() : "";
   
   const canStartAudit = auditStartDate ? today >= auditStartDate : false;
   const isInspectorHere = exitData?.inspectionDate ? today >= new Date(exitData.inspectionDate) : false;

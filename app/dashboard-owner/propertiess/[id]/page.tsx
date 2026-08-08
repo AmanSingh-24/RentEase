@@ -222,27 +222,11 @@ export default function PropertyDetails() {
                         )}
                       </div>
                     ) : (
-                      // Unassigned: Show invite code portal
-                      <div className="space-y-4 text-center py-6 bg-neutral-50 rounded-xl border border-neutral-200/60 border-dashed">
-                        <div className="max-w-xs mx-auto space-y-3 px-4">
-                          <Sparkles size={24} className="text-neutral-400 mx-auto" />
-                          <h4 className="text-xs font-black text-neutral-900 uppercase tracking-wider">Unassigned Vacant Asset</h4>
-                          <p className="text-[11px] text-neutral-400 font-medium">Provide this invite code to your verified tenant to start onboarding:</p>
-                          
-                          <div className="flex items-center justify-between bg-white px-4 py-3 rounded-xl border border-neutral-200 font-mono text-lg font-black tracking-widest text-neutral-950 shadow-3xs uppercase">
-                            <span>{property.inviteCode}</span>
-                            <button onClick={copyCode} className="text-neutral-400 hover:text-neutral-950 cursor-pointer">
-                              {copied ? <Check size={14} className="text-emerald-600"/> : <Copy size={14}/>}
-                            </button>
-                          </div>
-
-                          <button 
-                            onClick={shareToWhatsApp} 
-                            className="w-full py-2 bg-neutral-950 hover:bg-black text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
-                          >
-                            <Share2 size={13} /> Share WhatsApp Invite
-                          </button>
-                        </div>
+                      // Unassigned: Show simple empty state
+                      <div className="space-y-4 text-center py-10 bg-neutral-50 rounded-xl border border-neutral-200/60 border-dashed flex flex-col items-center justify-center">
+                        <Sparkles size={32} className="text-neutral-300 mx-auto mb-2" />
+                        <h4 className="text-xs font-black text-neutral-400 uppercase tracking-widest">No Active Tenant</h4>
+                        <p className="text-[10px] text-neutral-400 font-medium max-w-[200px]">This property is currently vacant and waiting for a new resident.</p>
                       </div>
                     )}
                   </motion.div>
@@ -262,8 +246,11 @@ export default function PropertyDetails() {
                               <UserX size={14} />
                             </div>
                             <div className="min-w-0">
-                              <p className="text-xs font-extrabold text-neutral-900 truncate leading-snug">{past.name}</p>
-                              <p className="text-[9px] text-neutral-400 font-semibold truncate">{past.email}</p>
+                              <p className="text-xs font-extrabold text-neutral-900 truncate leading-snug">{past.tenantId?.name || past.name || "Unknown Tenant"}</p>
+                              <p className="text-[9px] text-neutral-400 font-semibold truncate flex items-center gap-1 mt-0.5"><Mail size={10}/> {past.tenantId?.email || past.email || "N/A"}</p>
+                              {(past.tenantId?.kycDetails?.phone || past.tenantId?.phone) && (
+                                <p className="text-[9px] text-neutral-400 font-semibold truncate flex items-center gap-1 mt-0.5"><Phone size={10}/> {past.tenantId?.kycDetails?.phone || past.tenantId?.phone}</p>
+                              )}
                             </div>
                           </div>
                           <div className="text-right shrink-0">

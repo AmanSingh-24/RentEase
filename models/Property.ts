@@ -62,7 +62,7 @@ const PropertySchema = new mongoose.Schema({
 
   pastTenants: [
     {
-      tenantId: mongoose.Schema.Types.ObjectId,
+      tenantId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
       name: String,
       email: String,
       movedOutAt: { type: Date, default: Date.now },

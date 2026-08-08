@@ -17,9 +17,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Property ID is required" }, { status: 400 });
     }
 
-    // ✅ LOGIC: Populate the tenantId to get the full name and email
+    // ✅ LOGIC: Populate the active tenant and the past tenants
     const property = await Property.findById(id)
-      .populate("tenantId", "name email");
+      .populate("tenantId", "name email")
+      .populate("pastTenants.tenantId", "name email phone kycDetails");
 
     if (!property) {
       return NextResponse.json({ error: "Property not found" }, { status: 404 });

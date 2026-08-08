@@ -114,7 +114,8 @@ export default function FinalSettlement({ params }: { params: Promise<{ id: stri
           body: JSON.stringify({ 
              exitId, 
              status: "payout_released", 
-             transactionId: payoutMethod === "manual" ? manualTxnId : undefined 
+             transactionId: payoutMethod === "manual" ? manualTxnId : "FREE_HANDSHAKE_NO_TXN",
+             paymentMethod: finalRefund === 0 ? "zero_settlement" : payoutMethod
           })
         });
         if (res.ok) router.push("/dashboard-owner/exit");
@@ -137,7 +138,12 @@ export default function FinalSettlement({ params }: { params: Promise<{ id: stri
           const res = await fetch("/api/exit/respond-notice", {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ exitId, status: "payout_released", transactionId: response.razorpay_payment_id })
+            body: JSON.stringify({ 
+              exitId, 
+              status: "payout_released", 
+              transactionId: response.razorpay_payment_id,
+              paymentMethod: "razorpay" 
+            })
           });
           if (res.ok) router.push("/dashboard-owner/exit");
           setIsProcessing(false);
