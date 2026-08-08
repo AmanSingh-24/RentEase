@@ -1,6 +1,6 @@
 "use client";
 
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, CircleMarker } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useEffect, useState } from "react";
@@ -18,9 +18,10 @@ const markerIcon = new L.Icon({
 
 interface MultiPropertyMapProps {
   properties: any[];
+  isHeatmap?: boolean;
 }
 
-export default function MultiPropertyMap({ properties }: MultiPropertyMapProps) {
+export default function MultiPropertyMap({ properties, isHeatmap = false }: MultiPropertyMapProps) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -37,6 +38,14 @@ export default function MultiPropertyMap({ properties }: MultiPropertyMapProps) 
 
   // Filter properties that have valid coordinates
   const validProps = properties.filter((p) => p.location?.coordinates && p.location.coordinates.length === 2);
+
+  if (validProps.length === 0) {
+    return (
+      <div className="w-full h-full bg-neutral-100/50 flex flex-col items-center justify-center text-neutral-400">
+        <p className="text-xs font-bold uppercase tracking-widest mt-2">Locating Properties...</p>
+      </div>
+    );
+  }
 
   if (validProps.length === 1) {
     const coords = validProps[0].location.coordinates;
@@ -57,7 +66,6 @@ export default function MultiPropertyMap({ properties }: MultiPropertyMapProps) 
 
   return (
     <MapContainer
-      key={validProps.map((p) => p._id).join("-")}
       center={center}
       zoom={zoom}
       scrollWheelZoom={true}
@@ -69,6 +77,29 @@ export default function MultiPropertyMap({ properties }: MultiPropertyMapProps) 
       />
       {validProps.map((prop) => {
         const coords = prop.location.coordinates;
+        
+        if (isHeatmap) {
+          // Dynamic radius and color for Heatmap mode
+          const radius = prop.rentAmount ? Math.max(15, Math.min(40, prop.rentAmount / 1000)) : 15;
+          const color = prop.status === 'vacant' ? '#F59E0B' : prop.status === 'under_notice' ? '#EF4444' : '#10B981';
+          return (
+            <CircleMarker 
+              key={prop._id}
+              center={[coords[1], coords[0]]}
+              radius={radius}
+              pathOptions={{ color: color, fillColor: color, fillOpacity: 0.6, weight: 2 }}
+            >
+              <Popup>
+                <div className="text-xs space-y-1 font-semibold text-neutral-800">
+                  <p className="font-extrabold">{prop.address}</p>
+                  <p className="text-[10px] text-neutral-500 font-bold uppercase capitalize mt-0.5">{prop.status.replace("_", " ")} · {prop.city}</p>
+                  <p className="text-[10px] text-emerald-600 font-bold">Rent: ₹{prop.rentAmount?.toLocaleString()}/mo</p>
+                </div>
+              </Popup>
+            </CircleMarker>
+          );
+        }
+
         return (
           <Marker key={prop._id} position={[coords[1], coords[0]]} icon={markerIcon}>
             <Popup>

@@ -10,12 +10,14 @@ import {
   ShieldCheck,
   LogOut,
   Loader2,
+  Scale,
 } from "lucide-react";
 
 const adminNavItems = [
   { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
   { name: "KYC Queue", href: "/admin/dashboard?tab=landlords", icon: Users },
   { name: "Listings Queue", href: "/admin/dashboard?tab=properties", icon: Building2 },
+  { name: "Disputes", href: "/admin/disputes", icon: Scale },
   { name: "Oversight", href: "/admin/dashboard?tab=oversight", icon: ShieldCheck },
 ];
 

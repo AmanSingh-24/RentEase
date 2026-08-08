@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Bell, Camera, Wrench, CreditCard, Settings, LogOut, Loader2, Lock, MessageSquare, ClipboardList, X, Menu } from "lucide-react";
+import { LayoutDashboard, Bell, Camera, Wrench, CreditCard, Settings, LogOut, Loader2, Lock, MessageSquare, ClipboardList, X, Menu, Scale } from "lucide-react";
 
 import DashboardHeader from "../components/DashboardHeader";
 
@@ -70,6 +70,7 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
     { name: "Messages", href: "/dashboard-tenant/messages", icon: MessageSquare, protected: true, alwaysOpenInExit: true },
     { name: "Maintenance", href: "/dashboard-tenant/maintenance", icon: Wrench, protected: true },
     { name: "Payments", href: "/dashboard-tenant/payments", icon: CreditCard, protected: true },
+    { name: "Disputes", href: "/dashboard-tenant/disputes", icon: Scale, protected: true, alwaysOpenInExit: true },
     { name: "Settings", href: "/dashboard-tenant/settings", icon: Settings, protected: false },
     { name: "Exit", href: "/dashboard-tenant/exit", icon: LogOut, protected: true, alwaysOpenInExit: true },
   ];

@@ -7,7 +7,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { 
   LayoutGrid, Building2, Wrench, ShieldCheck, IndianRupee, 
-  Settings, LogOut, PlusCircle, X, Plus, MessageSquare, LayoutTemplate, ClipboardList, UserCheck, Menu, FileText, BarChart3
+  Settings, LogOut, PlusCircle, X, Plus, MessageSquare, LayoutTemplate, ClipboardList, UserCheck, Menu, FileText, BarChart3, Scale
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PropertyProvider, useProperty } from "../context/PropertyContext";
@@ -25,8 +25,9 @@ const ownerNavItems: { name: string; href: string; icon: any; color: string; bad
   { name: "Document Vault", href: "/dashboard-owner/documents", icon: FileText, color: "#6366F1" },
   { name: "Financials", href: "/dashboard-owner/financials", icon: IndianRupee, color: "#10B981" },
   { name: "Analytics", href: "/dashboard-owner/analytics", icon: BarChart3, color: "#EC4899" },
-  { name: "Settings", href: "/dashboard-owner/settingss", icon: Settings, color: "#6B7280" },
   { name: "Exit Notices", href: "/dashboard-owner/exit", icon: LogOut, color: "#6B7280" },
+  { name: "Disputes", href: "/dashboard-owner/disputes", icon: Scale, color: "#EF4444" },
+  { name: "Settings", href: "/dashboard-owner/settingss", icon: Settings, color: "#6B7280" },
 ];
 
 import AddPropertyModal from "../components/AddPropertyModal";
